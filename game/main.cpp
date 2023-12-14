@@ -14,15 +14,20 @@ constexpr unsigned WINDOW_HEIGHT = 800;
 constexpr unsigned MAX_FPS = 60;
 constexpr unsigned MAP_SPRITES_WIDTH = 8;
 constexpr unsigned MAP_SPRITES_COUNT = 36;
-constexpr unsigned SPRITE_SIZE = 24;
+constexpr unsigned MAP_SPRITE_SIZE = 24;
 constexpr unsigned MAP_WIDTH = 28;
+constexpr unsigned HERO_SPRITES_COUNT = 6;
+constexpr unsigned HERO_SPRITE_WIDTH = 24;
+constexpr unsigned HERO_SPRITE_HEIGHT = 42;
 
 // -- предварительные объявления функций (всех, кроме main) --
 void createWindow(sf::RenderWindow &);
 void initMap(std::vector<int> &);
-bool initSprites(sf::Image, std::vector<Sprite *> &, int);
+bool initSpritesMap(sf::Image, std::vector<Sprite *> &, int);
+bool initSpritesHero(sf::Image, std::vector<Sprite *> &, int);
 void handleEvents(sf::RenderWindow &);
 void renderMap(sf::RenderWindow &, std::vector<int>, std::vector<Sprite *>);
+void renderHero(sf::RenderWindow &, std::vector<Sprite *>);
 void clearSprites(std::vector<Sprite *> &);
 
 // -- определения функций --
@@ -38,18 +43,37 @@ void createWindow(sf::RenderWindow &window)
     window.setFramerateLimit(MAX_FPS);
 }
 
-bool initSprites(sf::Image sprites_file, std::vector<Sprite *> &sprites, int sprites_count)
+bool initSpritesMap(sf::Image sprites_file, std::vector<Sprite *> &sprites, int sprites_count)
 {
     Sprite *sprite;
 
     for (int i = 0; i < sprites_count; i++)
     {
-        int x = i % MAP_SPRITES_WIDTH * SPRITE_SIZE;
-        int y = i / MAP_SPRITES_WIDTH * SPRITE_SIZE;
+        int x = i % MAP_SPRITES_WIDTH * MAP_SPRITE_SIZE;
+        int y = i / MAP_SPRITES_WIDTH * MAP_SPRITE_SIZE;
         sprite = new Sprite;
         sprites.push_back(sprite);
-        sprites[i]->t.loadFromImage(sprites_file, sf::IntRect(x, y, SPRITE_SIZE, SPRITE_SIZE));
+        sprites[i]->t.loadFromImage(sprites_file, sf::IntRect(x, y, MAP_SPRITE_SIZE, MAP_SPRITE_SIZE));
         sprites[i]->s.setTexture(sprites[i]->t);
+    }
+
+    return true;
+}
+
+bool initSpritesHero(sf::Image sprites_file, std::vector<Sprite *> &sprites, int sprites_count)
+{
+    Sprite *sprite;
+    int originX = HERO_SPRITE_WIDTH / 2;
+    int originY = HERO_SPRITE_HEIGHT / 2;
+
+    for (int i = 0; i < sprites_count; i++)
+    {
+        int x = i * HERO_SPRITE_WIDTH;
+        sprite = new Sprite;
+        sprites.push_back(sprite);
+        sprites[i]->t.loadFromImage(sprites_file, sf::IntRect(x, 0, HERO_SPRITE_WIDTH, HERO_SPRITE_HEIGHT));
+        sprites[i]->s.setTexture(sprites[i]->t);
+        sprites[i]->s.setOrigin(originX, originY);
     }
 
     return true;
@@ -71,24 +95,32 @@ void handleEvents(sf::RenderWindow &window)
 // Функция рисует карту
 void renderMap(sf::RenderWindow &window, std::vector<int> map, std::vector<Sprite *> sprites)
 {
-    window.clear();
-
     int x, y;
 
     for (int i = 0; i < map.size(); i++)
     {
-        x = i % MAP_WIDTH * SPRITE_SIZE;
-        y = i / MAP_WIDTH * SPRITE_SIZE;
+        x = i % MAP_WIDTH * MAP_SPRITE_SIZE;
+        y = i / MAP_WIDTH * MAP_SPRITE_SIZE;
         sprites[map[i]]->s.setPosition(sf::Vector2f(x, y));
         window.draw(sprites[map[i]]->s);
     }
+}
 
-    window.display();
+// Функция рисует героя
+void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites)
+{
+    // int coordX = MAP_SPRITE_SIZE * 14;
+    // int coordY = MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE / 2;
+
+    
+
+    sprites[0]->s.setPosition(sf::Vector2f(coordX, coordY));
+    window.draw(sprites[0]->s);
 }
 
 void initMap(std::vector<int> &map)
 {
-    std::array<int, 28 * 31> mapArray = {
+    std::array<int, 28 * 31> map_array = {
          4, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,16,17, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 5,
          8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,28,26, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,10,
          8, 1,15,29,29,14, 1,15,29,29,29,14, 1,28,26, 1,15,29,29,29,14, 1,15,29,29,14, 1,10,
@@ -122,20 +154,20 @@ void initMap(std::vector<int> &map)
          6,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11, 7,
     };
 
-    for (int i = 0; i < mapArray.size(); i++)
+    for (int i = 0; i < map_array.size(); i++)
     {
-        map.push_back(mapArray[i]);
+        map.push_back(map_array[i]);
     }
 }
 
-void clearSprites(std::vector<Sprite *> &sprites)
+void clearSprites(std::vector<Sprite *> &sprites_map)
 {
-    for (int i = 0; i < sprites.size(); i++)
+    for (int i = 0; i < sprites_map.size(); i++)
     {
-        delete sprites[i];
+        delete sprites_map[i];
     }
 
-    sprites.clear();
+    sprites_map.clear();
 }
 
 int main(int, char *[])
@@ -143,15 +175,26 @@ int main(int, char *[])
     sf::RenderWindow window;
     createWindow(window);
 
-    sf::Image sprites_file;
-    if (!sprites_file.loadFromFile("sprites.png"))
+    sf::Image sprites_map_file;
+    sf::Image sprites_hero_file;
+
+    if (!sprites_map_file.loadFromFile("sprites.png"))
     {
-        std::cout << "Error loading image!" << std::endl;
+        std::cout << "Error loading map sprites!" << std::endl;
         return false;
     }
 
-    std::vector<Sprite *> sprites;
-    initSprites(sprites_file, sprites, MAP_SPRITES_COUNT);
+    if (!sprites_hero_file.loadFromFile("sprites_hero.png"))
+    {
+        std::cout << "Error loading hero sprites!" << std::endl;
+        return false;
+    }
+
+    std::vector<Sprite *> sprites_map;
+    initSpritesMap(sprites_map_file, sprites_map, MAP_SPRITES_COUNT);
+
+    std::vector<Sprite *> sprites_hero;
+    initSpritesHero(sprites_hero_file, sprites_hero, HERO_SPRITES_COUNT);
 
     std::vector<int> map;
     initMap(map);
@@ -161,10 +204,15 @@ int main(int, char *[])
     {
         handleEvents(window);
         // update(clock, packman);
-        renderMap(window, map, sprites);
+        window.clear();
+
+        renderMap(window, map, sprites_map);
+        renderHero(window, sprites_hero);
+
+        window.display();
     }
 
-    clearSprites(sprites);
+    clearSprites(sprites_map);
 
     return 0;
 }
