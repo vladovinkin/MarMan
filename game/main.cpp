@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <array>
+#include <cmath>
 
 // -- объявления констант --
 constexpr unsigned ANTIALIASING_LEVEL = 8;
@@ -262,17 +263,51 @@ void clearSprites(std::vector<Sprite *> &sprites_map)
 
 void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
 {
-    const float step = PACKMAN_SPEED * elapsedTime;
+    const float step = PACKMAN_SPEED * elapsedTime; // весь путь на итерацию
     sf::Vector2f position = pacman.position;
 
-    Direction dd = pacman.directionDesired;
-    if (dd != Direction::NONE && dd != pacman.direction)
-    {
-        pacman.direction = dd;
-    }
-
+    /*
+    Если дд есть и оно не равно д
+      проверить - можно ли поменять направление
+        если можно - поменять (д = дд)
+    Если есть д
+      проверить - можно ли двигаться
+        если можно - двинуться
+        если нет - д = ноне
+    */
     int curMapPositionY = static_cast<int>(position.y) / MAP_SPRITE_SIZE;
     int curMapPositionX = static_cast<int>(position.x) / MAP_SPRITE_SIZE;
+
+    if (pacman.directionDesired != pacman.direction)
+    {
+        // дельта
+        int delta;
+
+        switch (pacman.directionDesired)
+        {
+            case Direction::UP:
+            case Direction::DOWN:
+                delta = static_cast<int>(position.x) - (curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
+                if (std::abs(delta) < 2 && map[curMapPositionY][curMapPositionX] <= 2)
+                {
+                    pacman.direction = pacman.directionDesired;
+                    position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2; 
+                }
+                break;
+            case Direction::LEFT:
+            case Direction::RIGHT:
+                delta = static_cast<int>(position.y) - (curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
+                if (std::abs(delta) < 2 && map[curMapPositionY][curMapPositionX] <= 2)
+                {
+                    pacman.direction = pacman.directionDesired;
+                    position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;                     
+                }
+                break;
+            case Direction::NONE:
+                break;
+        }
+    }
+
     int newMapPositionX, newMapPositionY;
 
     switch (pacman.direction)
