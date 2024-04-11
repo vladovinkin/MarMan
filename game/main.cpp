@@ -286,7 +286,7 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
         curMapPositionX = (static_cast<int>(position.x) - HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
         position.x -= step;
         newMapPositionX = (static_cast<int>(position.x) - HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
-        if (newMapPositionX != curMapPositionX)
+        if (newMapPositionX != curMapPositionX && newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
         {
             curMapPositionY = (static_cast<int>(position.y)) / MAP_SPRITE_SIZE;
             if (map[curMapPositionY][newMapPositionX] > 2)
@@ -297,7 +297,18 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
         }
         break;
     case Direction::RIGHT:
+        curMapPositionX = (static_cast<int>(position.x) - HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
         position.x += step;
+        newMapPositionX = (static_cast<int>(position.x) + HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
+        if (newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
+        {
+            curMapPositionY = (static_cast<int>(position.y)) / MAP_SPRITE_SIZE;
+            if (map[curMapPositionY][newMapPositionX] > 2)
+            {
+                position.x = newMapPositionX * MAP_SPRITE_SIZE - HERO_SPRITE_WIDTH / 2;
+                pacman.direction = Direction::NONE;
+            }
+        }
         break;
     case Direction::NONE:
         break;
