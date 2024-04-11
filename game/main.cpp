@@ -16,7 +16,8 @@ constexpr unsigned GAME_MAP_HEIGHT = 31;
 constexpr unsigned HERO_SPRITES_COUNT = 6;
 constexpr unsigned HERO_SPRITE_WIDTH = 24;
 constexpr unsigned HERO_SPRITE_HEIGHT = 42;
-constexpr unsigned PACKMAN_SPEED = 40.f;
+constexpr unsigned PACKMAN_SPEED = 100.f;
+constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
 
 static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE / 2};
 
@@ -202,12 +203,36 @@ void renderMap(sf::RenderWindow &window, const GameMap &map, std::vector<Sprite 
 // Функция рисует героя
 void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero hero)
 {
-    sprites[0]->s.setPosition(sf::Vector2f(hero.position.x, hero.position.y));
-    sprites[0]->s.setScale(-1, 1);
-    window.draw(sprites[0]->s);
+    Sprite *sprite;
 
-    sf::Vertex point(sf::Vector2f(hero.position.x - 10, hero.position.y - 10), sf::Color::White);
-    window.draw(&point, 1, sf::Points);
+    switch (hero.direction)
+    {
+    case Direction::LEFT:
+        sprite = sprites[0];
+        sprite->s.setScale(-1, 1);
+        break;
+    case Direction::RIGHT:
+        sprite = sprites[0];
+        sprite->s.setScale(1, 1);
+        break;
+    case Direction::UP:
+        sprite = sprites[3];
+        // sprite->s.setScale(1, 1);
+        break;
+    case Direction::DOWN:
+        sprite = sprites[2];
+        // sprite->s.setScale(1, 1);
+        break;
+    default:
+        sprite = sprites[4];
+        break;
+    }
+
+    sprite->s.setPosition(sf::Vector2f(hero.position.x, hero.position.y));
+    window.draw(sprite->s);
+
+    sprite = NULL;
+    delete sprite;
 }
 
 void initMap(GameMap &map)
@@ -277,47 +302,47 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
 
         switch (pacman.directionDesired)
         {
-            case Direction::UP:
-            case Direction::DOWN:
-                delta = static_cast<int>(position.x) - (curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
-                break;
-            case Direction::LEFT:
-            case Direction::RIGHT:
-                delta = static_cast<int>(position.y) - (curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
-                break;
+        case Direction::UP:
+        case Direction::DOWN:
+            delta = static_cast<int>(position.x) - (curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
+            break;
+        case Direction::LEFT:
+        case Direction::RIGHT:
+            delta = static_cast<int>(position.y) - (curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
+            break;
         }
 
         switch (pacman.directionDesired)
         {
-            case Direction::UP:
-                desMapPositionY = curMapPositionY - 1;
-                break;
-            case Direction::DOWN:
-                desMapPositionY = curMapPositionY + 1;
-                break;
-            case Direction::LEFT:
-                desMapPositionX = curMapPositionX - 1;
-                break;
-            case Direction::RIGHT:
-                desMapPositionX = curMapPositionX + 1;
-                break;
+        case Direction::UP:
+            desMapPositionY = curMapPositionY - 1;
+            break;
+        case Direction::DOWN:
+            desMapPositionY = curMapPositionY + 1;
+            break;
+        case Direction::LEFT:
+            desMapPositionX = curMapPositionX - 1;
+            break;
+        case Direction::RIGHT:
+            desMapPositionX = curMapPositionX + 1;
+            break;
         }
 
-        if (std::abs(delta) < 2 && map[desMapPositionY][desMapPositionX] <= 2)
+        if (std::abs(delta) < LIMIT_PIXELS_TO_TURN && map[desMapPositionY][desMapPositionX] <= 2)
         {
             pacman.direction = pacman.directionDesired;
 
             switch (pacman.directionDesired)
             {
-                case Direction::UP:
-                case Direction::DOWN:
-                    position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
-                    break;
-                case Direction::LEFT:
-                case Direction::RIGHT:
-                    position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;                     
-                    break;
-            } 
+            case Direction::UP:
+            case Direction::DOWN:
+                position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                break;
+            case Direction::LEFT:
+            case Direction::RIGHT:
+                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                break;
+            }
         }
     }
 
