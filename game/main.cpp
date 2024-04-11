@@ -271,41 +271,56 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
         pacman.direction = dd;
     }
 
-    int curMapPositionX, newMapPositionX;
-    int curMapPositionY, newMapPositionY;
+    int curMapPositionY = static_cast<int>(position.y) / MAP_SPRITE_SIZE;
+    int curMapPositionX = static_cast<int>(position.x) / MAP_SPRITE_SIZE;
+    int newMapPositionX, newMapPositionY;
 
     switch (pacman.direction)
     {
     case Direction::UP:
         position.y -= step;
+        newMapPositionY = (static_cast<int>(position.y) - MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        if (newMapPositionY != curMapPositionY && newMapPositionY >= 0 && newMapPositionY <= GAME_MAP_HEIGHT - 1)
+        {
+            if (map[newMapPositionY][curMapPositionX] > 2)
+            {
+                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                pacman.direction = Direction::NONE;
+            }
+        }
         break;
     case Direction::DOWN:
         position.y += step;
+        newMapPositionY = (static_cast<int>(position.y) + MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        if (newMapPositionY != curMapPositionY && newMapPositionY >= 0 && newMapPositionY <= GAME_MAP_HEIGHT - 1)
+        {
+            if (map[newMapPositionY][curMapPositionX] > 2)
+            {
+                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                pacman.direction = Direction::NONE;
+            }
+        }
         break;
     case Direction::LEFT:
-        curMapPositionX = (static_cast<int>(position.x) - HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
         position.x -= step;
-        newMapPositionX = (static_cast<int>(position.x) - HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
+        newMapPositionX = (static_cast<int>(position.x) - MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
         if (newMapPositionX != curMapPositionX && newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
         {
-            curMapPositionY = (static_cast<int>(position.y)) / MAP_SPRITE_SIZE;
             if (map[curMapPositionY][newMapPositionX] > 2)
             {
-                position.x = curMapPositionX * MAP_SPRITE_SIZE + HERO_SPRITE_WIDTH / 2;
+                position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
                 pacman.direction = Direction::NONE;
             }
         }
         break;
     case Direction::RIGHT:
-        curMapPositionX = (static_cast<int>(position.x) - HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
         position.x += step;
-        newMapPositionX = (static_cast<int>(position.x) + HERO_SPRITE_WIDTH / 2) / MAP_SPRITE_SIZE;
-        if (newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
+        newMapPositionX = (static_cast<int>(position.x) + MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        if (newMapPositionX != curMapPositionX && newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
         {
-            curMapPositionY = (static_cast<int>(position.y)) / MAP_SPRITE_SIZE;
             if (map[curMapPositionY][newMapPositionX] > 2)
             {
-                position.x = newMapPositionX * MAP_SPRITE_SIZE - HERO_SPRITE_WIDTH / 2;
+                position.x = newMapPositionX * MAP_SPRITE_SIZE - MAP_SPRITE_SIZE / 2;
                 pacman.direction = Direction::NONE;
             }
         }
