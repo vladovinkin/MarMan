@@ -11,6 +11,7 @@ constexpr unsigned MAX_FPS = 60;
 constexpr unsigned MAP_SPRITES_WIDTH = 8;
 constexpr unsigned MAP_SPRITES_COUNT = 36;
 constexpr unsigned MAP_SPRITE_SIZE = 24;
+constexpr unsigned MAP_SPRITE_SIZE_HALF = MAP_SPRITE_SIZE / 2;
 constexpr unsigned GAME_MAP_WIDTH = 28;
 constexpr unsigned GAME_MAP_HEIGHT = 31;
 constexpr unsigned HERO_SPRITES_COUNT = 6;
@@ -55,6 +56,8 @@ void handleEvents(sf::RenderWindow &, Hero &);
 void renderMap(sf::RenderWindow &, const GameMap &, Hero);
 void renderHero(sf::RenderWindow &, std::vector<Sprite *>);
 void clearSprites(std::vector<Sprite *> &);
+void updatePackman(Hero &, float, const GameMap &);
+void calcCollisions(Hero &, GameMap &);
 
 // -- определения функций --
 
@@ -404,11 +407,61 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
     pacman.position = position;
 }
 
+void calcCollisions(Hero &pacman, GameMap &map)
+{
+    /*
+    найти место на карте, куда наступаем (текущая координата игрока + пол размера спрайта)
+    если на этом месте спрайт 1(монета) или 2(звезда)
+        если от центра спрайта до центра игрока менее 1/3 размера спрайта карты
+            фиксируем взятие монеты или звезды
+            на карту наносим пустое место
+    */
+
+    sf::Vector2f positionNext = pacman.position;
+
+    switch (pacman.direction)
+    {
+    case Direction::UP:
+        positionNext.y = pacman.position.y - static_cast<float>(MAP_SPRITE_SIZE / 2);
+        break;
+    case Direction::DOWN:
+        positionNext.y = pacman.position.y + static_cast<float>(MAP_SPRITE_SIZE / 2);
+        break;
+    case Direction::LEFT:
+        positionNext.x = pacman.position.x - static_cast<float>(MAP_SPRITE_SIZE / 2);
+        break;
+    case Direction::RIGHT:
+        positionNext.x = pacman.position.x + static_cast<float>(MAP_SPRITE_SIZE / 2);
+        break;
+    }
+
+    int nextMapPositionX = static_cast<int>(positionNext.x) / MAP_SPRITE_SIZE;
+    int nextMapPositionY = static_cast<int>(positionNext.y) / MAP_SPRITE_SIZE;
+    int nextSpriteValue = map[nextMapPositionY][nextMapPositionX];
+
+    if (nextSpriteValue == 1 || nextSpriteValue == 2)
+    {
+        sf::Vector2f positionItemCenter = {
+            x : static_cast<float>(nextMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2),
+            y : static_cast<float>(nextMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2),
+        };
+
+        float MapSpriteSizeThirdPart = float(MAP_SPRITE_SIZE / 3);
+
+        if (std::fabs(pacman.position.x - positionItemCenter.x) < MapSpriteSizeThirdPart && std::fabs(pacman.position.y - positionItemCenter.y) < MapSpriteSizeThirdPart)
+        {
+            std::cout << (nextSpriteValue == 1 ? "Coin" : "Star") << '\n';
+            map[nextMapPositionY][nextMapPositionX] = 0;
+        }
+    }
+}
+
 void update(sf::Clock &clock, Hero &packman, GameMap &map)
 {
     const float elapsedTime = clock.getElapsedTime().asSeconds();
     clock.restart();
     updatePackman(packman, elapsedTime, map);
+    calcCollisions(packman, map);
 }
 
 int main(int, char *[])
