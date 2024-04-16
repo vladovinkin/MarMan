@@ -46,10 +46,18 @@ struct Hero
     Direction directionDesired;
 };
 
+struct Game
+{
+    int unsigned lives;
+    int unsigned score;
+    int unsigned highScore;
+};
+
 // -- предварительные объ€влени€ функций (всех, кроме main) --
 void createWindow(sf::RenderWindow &);
 void initMap(GameMap &);
 void initHero(Hero &);
+void initGame(Game &);
 bool initSpritesMap(sf::Image, std::vector<Sprite *> &, int);
 bool initSpritesHero(sf::Image, std::vector<Sprite *> &, int);
 void handleEvents(sf::RenderWindow &, Hero &);
@@ -238,6 +246,13 @@ void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero he
     delete sprite;
 }
 
+void initGame(Game &game)
+{
+    game.lives = 3;
+    game.score = 0;
+    game.highScore = 0;
+}
+
 void initMap(GameMap &map)
 {
     map = {{{4, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 16, 17, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 5},
@@ -307,11 +322,11 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
         {
         case Direction::UP:
         case Direction::DOWN:
-            delta = static_cast<int>(position.x) - (curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
+            delta = static_cast<int>(position.x) - (curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF);
             break;
         case Direction::LEFT:
         case Direction::RIGHT:
-            delta = static_cast<int>(position.y) - (curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2);
+            delta = static_cast<int>(position.y) - (curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF);
             break;
         }
 
@@ -339,11 +354,11 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
             {
             case Direction::UP:
             case Direction::DOWN:
-                position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
                 break;
             case Direction::LEFT:
             case Direction::RIGHT:
-                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
                 break;
             }
         }
@@ -355,48 +370,48 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
     {
     case Direction::UP:
         position.y -= step;
-        newMapPositionY = (static_cast<int>(position.y) - MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        newMapPositionY = (static_cast<int>(position.y) - MAP_SPRITE_SIZE_HALF) / MAP_SPRITE_SIZE;
         if (newMapPositionY != curMapPositionY && newMapPositionY >= 0 && newMapPositionY <= GAME_MAP_HEIGHT - 1)
         {
             if (map[newMapPositionY][curMapPositionX] > 2)
             {
-                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
                 pacman.direction = Direction::NONE;
             }
         }
         break;
     case Direction::DOWN:
         position.y += step;
-        newMapPositionY = (static_cast<int>(position.y) + MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        newMapPositionY = (static_cast<int>(position.y) + MAP_SPRITE_SIZE_HALF) / MAP_SPRITE_SIZE;
         if (newMapPositionY != curMapPositionY && newMapPositionY >= 0 && newMapPositionY <= GAME_MAP_HEIGHT - 1)
         {
             if (map[newMapPositionY][curMapPositionX] > 2)
             {
-                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                position.y = curMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
                 pacman.direction = Direction::NONE;
             }
         }
         break;
     case Direction::LEFT:
         position.x -= step;
-        newMapPositionX = (static_cast<int>(position.x) - MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        newMapPositionX = (static_cast<int>(position.x) - MAP_SPRITE_SIZE_HALF) / MAP_SPRITE_SIZE;
         if (newMapPositionX != curMapPositionX && newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
         {
             if (map[curMapPositionY][newMapPositionX] > 2)
             {
-                position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2;
+                position.x = curMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
                 pacman.direction = Direction::NONE;
             }
         }
         break;
     case Direction::RIGHT:
         position.x += step;
-        newMapPositionX = (static_cast<int>(position.x) + MAP_SPRITE_SIZE / 2) / MAP_SPRITE_SIZE;
+        newMapPositionX = (static_cast<int>(position.x) + MAP_SPRITE_SIZE_HALF) / MAP_SPRITE_SIZE;
         if (newMapPositionX != curMapPositionX && newMapPositionX >= 0 && newMapPositionX <= GAME_MAP_WIDTH - 1)
         {
             if (map[curMapPositionY][newMapPositionX] > 2)
             {
-                position.x = newMapPositionX * MAP_SPRITE_SIZE - MAP_SPRITE_SIZE / 2;
+                position.x = newMapPositionX * MAP_SPRITE_SIZE - MAP_SPRITE_SIZE_HALF;
                 pacman.direction = Direction::NONE;
             }
         }
@@ -422,16 +437,16 @@ void calcCollisions(Hero &pacman, GameMap &map)
     switch (pacman.direction)
     {
     case Direction::UP:
-        positionNext.y = pacman.position.y - static_cast<float>(MAP_SPRITE_SIZE / 2);
+        positionNext.y = pacman.position.y - static_cast<float>(MAP_SPRITE_SIZE_HALF);
         break;
     case Direction::DOWN:
-        positionNext.y = pacman.position.y + static_cast<float>(MAP_SPRITE_SIZE / 2);
+        positionNext.y = pacman.position.y + static_cast<float>(MAP_SPRITE_SIZE_HALF);
         break;
     case Direction::LEFT:
-        positionNext.x = pacman.position.x - static_cast<float>(MAP_SPRITE_SIZE / 2);
+        positionNext.x = pacman.position.x - static_cast<float>(MAP_SPRITE_SIZE_HALF);
         break;
     case Direction::RIGHT:
-        positionNext.x = pacman.position.x + static_cast<float>(MAP_SPRITE_SIZE / 2);
+        positionNext.x = pacman.position.x + static_cast<float>(MAP_SPRITE_SIZE_HALF);
         break;
     }
 
@@ -442,13 +457,14 @@ void calcCollisions(Hero &pacman, GameMap &map)
     if (nextSpriteValue == 1 || nextSpriteValue == 2)
     {
         sf::Vector2f positionItemCenter = {
-            x : static_cast<float>(nextMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2),
-            y : static_cast<float>(nextMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE / 2),
+            x : static_cast<float>(nextMapPositionX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF),
+            y : static_cast<float>(nextMapPositionY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF),
         };
 
-        float MapSpriteSizeThirdPart = float(MAP_SPRITE_SIZE / 3);
+        float MapSpriteSizeThirdPart = static_cast<float>(MAP_SPRITE_SIZE / 3);
 
-        if (std::fabs(pacman.position.x - positionItemCenter.x) < MapSpriteSizeThirdPart && std::fabs(pacman.position.y - positionItemCenter.y) < MapSpriteSizeThirdPart)
+        if (std::fabs(pacman.position.x - positionItemCenter.x) < MapSpriteSizeThirdPart 
+            && std::fabs(pacman.position.y - positionItemCenter.y) < MapSpriteSizeThirdPart)
         {
             std::cout << (nextSpriteValue == 1 ? "Coin" : "Star") << '\n';
             map[nextMapPositionY][nextMapPositionX] = 0;
@@ -466,8 +482,8 @@ void update(sf::Clock &clock, Hero &packman, GameMap &map)
 
 int main(int, char *[])
 {
-    sf::RenderWindow window;
-    createWindow(window);
+    Game game;
+    initGame(game);
 
     sf::Image sprites_map_file;
     sf::Image sprites_hero_file;
@@ -495,6 +511,9 @@ int main(int, char *[])
 
     Hero hero;
     initHero(hero);
+
+    sf::RenderWindow window;
+    createWindow(window);
 
     sf::Clock clock;
     while (window.isOpen())
