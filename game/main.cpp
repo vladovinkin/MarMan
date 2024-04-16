@@ -49,6 +49,8 @@ struct Hero
 struct Game
 {
     int unsigned lives;
+    int unsigned coins;
+    int unsigned stars;
     int unsigned score;
     int unsigned highScore;
 };
@@ -65,7 +67,7 @@ void renderMap(sf::RenderWindow &, const GameMap &, Hero);
 void renderHero(sf::RenderWindow &, std::vector<Sprite *>);
 void clearSprites(std::vector<Sprite *> &);
 void updatePackman(Hero &, float, const GameMap &);
-void calcCollisions(Hero &, GameMap &);
+void calcCollisions(Hero &, Game &game, GameMap &);
 
 // -- определения функций --
 
@@ -249,6 +251,8 @@ void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero he
 void initGame(Game &game)
 {
     game.lives = 3;
+    game.coins = 0;
+    game.stars = 0;
     game.score = 0;
     game.highScore = 0;
 }
@@ -422,7 +426,7 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
     pacman.position = position;
 }
 
-void calcCollisions(Hero &pacman, GameMap &map)
+void calcCollisions(Hero &pacman, Game &game, GameMap &map)
 {
     /*
     найти место на карте, куда наступаем (текущая координата игрока + пол размера спрайта)
@@ -463,21 +467,28 @@ void calcCollisions(Hero &pacman, GameMap &map)
 
         float MapSpriteSizeThirdPart = static_cast<float>(MAP_SPRITE_SIZE / 3);
 
-        if (std::fabs(pacman.position.x - positionItemCenter.x) < MapSpriteSizeThirdPart 
-            && std::fabs(pacman.position.y - positionItemCenter.y) < MapSpriteSizeThirdPart)
+        if (std::fabs(pacman.position.x - positionItemCenter.x) < MapSpriteSizeThirdPart && std::fabs(pacman.position.y - positionItemCenter.y) < MapSpriteSizeThirdPart)
         {
-            std::cout << (nextSpriteValue == 1 ? "Coin" : "Star") << '\n';
+            if (nextSpriteValue == 1)
+            {
+                game.coins++;
+            }
+            else
+            {
+                game.stars++;
+            }
             map[nextMapPositionY][nextMapPositionX] = 0;
+            std::cout << "Coins: " << game.coins << " ; Stars: " << game.stars <<'\n';
         }
     }
 }
 
-void update(sf::Clock &clock, Hero &packman, GameMap &map)
+void update(sf::Clock &clock, Game &game, Hero &packman, GameMap &map)
 {
     const float elapsedTime = clock.getElapsedTime().asSeconds();
     clock.restart();
     updatePackman(packman, elapsedTime, map);
-    calcCollisions(packman, map);
+    calcCollisions(packman, game, map);
 }
 
 int main(int, char *[])
@@ -519,7 +530,7 @@ int main(int, char *[])
     while (window.isOpen())
     {
         handleEvents(window, hero);
-        update(clock, hero, map);
+        update(clock, game, hero, map);
         window.clear();
 
         renderMap(window, map, sprites_map);
