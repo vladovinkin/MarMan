@@ -17,10 +17,13 @@ constexpr unsigned GAME_MAP_HEIGHT = 31;
 constexpr unsigned HERO_SPRITES_COUNT = 6;
 constexpr unsigned HERO_SPRITE_WIDTH = 24;
 constexpr unsigned HERO_SPRITE_HEIGHT = 42;
+constexpr unsigned ENEMY_SPRITES_COUNT = 2;
+constexpr unsigned ENEMY_SPRITE_HEIGHT = 42;
+constexpr unsigned ENEMY_SPRITE_WIDTH = 42;
 constexpr unsigned PACKMAN_SPEED = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
 
-static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE / 2};
+static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE_HALF};
 
 typedef std::array<std::array<int, GAME_MAP_WIDTH>, GAME_MAP_HEIGHT> GameMap;
 
@@ -46,6 +49,12 @@ struct Hero
     Direction directionDesired;
 };
 
+struct Enemy
+{
+    sf::Vector2f position;
+    Direction direction;
+};
+
 struct Game
 {
     int unsigned lives;
@@ -59,6 +68,7 @@ struct Game
 void createWindow(sf::RenderWindow &);
 void initMap(GameMap &);
 void initHero(Hero &);
+void initEnemy(Enemy &);
 void initGame(Game &);
 bool initSpritesMap(sf::Image, std::vector<Sprite *> &, int);
 bool initSpritesHero(sf::Image, std::vector<Sprite *> &, int);
@@ -67,7 +77,7 @@ void renderMap(sf::RenderWindow &, const GameMap &, Hero);
 void renderHero(sf::RenderWindow &, std::vector<Sprite *>);
 void clearSprites(std::vector<Sprite *> &);
 void updatePackman(Hero &, float, const GameMap &);
-void calcCollisions(Hero &, Game &game, GameMap &);
+void calcCollisionsItems(Hero &, Game &game, GameMap &);
 
 // -- определения функций --
 
@@ -179,6 +189,25 @@ bool initSpritesHero(sf::Image sprites_file, std::vector<Sprite *> &sprites, int
     return true;
 }
 
+bool initSpritesEnemy(sf::Image sprites_file, std::vector<Sprite *> &sprites, int sprites_count)
+{
+    Sprite *sprite;
+    int originX = ENEMY_SPRITE_WIDTH / 2;
+    int originY = ENEMY_SPRITE_HEIGHT / 2;
+
+    for (int i = 0; i < sprites_count; i++)
+    {
+        int x = i * ENEMY_SPRITE_WIDTH;
+        sprite = new Sprite;
+        sprites.push_back(sprite);
+        sprites[i]->t.loadFromImage(sprites_file, sf::IntRect(x, 0, ENEMY_SPRITE_WIDTH, ENEMY_SPRITE_HEIGHT));
+        sprites[i]->s.setTexture(sprites[i]->t);
+        sprites[i]->s.setOrigin(originX, originY);
+    }
+
+    return true;
+}
+
 // Функция обрабатывает все события, скопившиеся в очереди событий SFML.
 void handleEvents(sf::RenderWindow &window, Hero &pacman)
 {
@@ -248,6 +277,19 @@ void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero he
     delete sprite;
 }
 
+void renderEnemy(sf::RenderWindow &window, std::vector<Sprite *> sprites, Enemy enemy)
+{
+    Sprite *sprite;
+
+    sprite = sprites[0];
+
+    sprite->s.setPosition(sf::Vector2f(enemy.position.x, enemy.position.y));
+    window.draw(sprite->s);
+
+    sprite = NULL;
+    delete sprite;
+}
+
 void initGame(Game &game)
 {
     game.lives = 3;
@@ -296,6 +338,16 @@ void initHero(Hero &hero)
 {
     hero.position = HERO_INITIAL_POSITION;
     hero.direction = Direction::LEFT;
+    hero.directionDesired = Direction::NONE;
+}
+
+void initEnemy(Enemy &enemy)
+{
+    enemy.position = {
+        MAP_SPRITE_SIZE * 14,
+        MAP_SPRITE_SIZE * 11 + MAP_SPRITE_SIZE_HALF,
+    };
+    enemy.direction = Direction::NONE;
 }
 
 void clearSprites(std::vector<Sprite *> &sprites_map)
@@ -426,7 +478,7 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
     pacman.position = position;
 }
 
-void calcCollisions(Hero &pacman, Game &game, GameMap &map)
+void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
 {
     /*
     найти место на карте, куда наступаем (текущая координата игрока + пол размера спрайта)
@@ -478,17 +530,19 @@ void calcCollisions(Hero &pacman, Game &game, GameMap &map)
                 game.stars++;
             }
             map[nextMapPositionY][nextMapPositionX] = 0;
-            std::cout << "Coins: " << game.coins << " ; Stars: " << game.stars <<'\n';
+            std::cout << "Coins: " << game.coins << " ; Stars: " << game.stars << '\n';
         }
     }
 }
 
-void update(sf::Clock &clock, Game &game, Hero &packman, GameMap &map)
+void update(sf::Clock &clock, Game &game, Hero &pacman, Enemy &enemy, GameMap &map)
 {
     const float elapsedTime = clock.getElapsedTime().asSeconds();
     clock.restart();
-    updatePackman(packman, elapsedTime, map);
-    calcCollisions(packman, game, map);
+    updatePackman(pacman, elapsedTime, map);
+    // updateEnemies(pacman, enemy);
+    calcCollisionsItems(pacman, game, map);
+    // calcCollisionsEnemies(packman, enemy);
 }
 
 int main(int, char *[])
@@ -498,6 +552,7 @@ int main(int, char *[])
 
     sf::Image sprites_map_file;
     sf::Image sprites_hero_file;
+    sf::Image sprites_enemy_file;
 
     if (!sprites_map_file.loadFromFile("sprites.png"))
     {
@@ -511,17 +566,29 @@ int main(int, char *[])
         return 1;
     }
 
+    if (!sprites_enemy_file.loadFromFile("goomba.png"))
+    {
+        std::cout << "Error loading enemy sprites!" << std::endl;
+        return 1;
+    }
+
     std::vector<Sprite *> sprites_map;
     initSpritesMap(sprites_map_file, sprites_map, MAP_SPRITES_COUNT);
 
     std::vector<Sprite *> sprites_hero;
     initSpritesHero(sprites_hero_file, sprites_hero, HERO_SPRITES_COUNT);
 
+    std::vector<Sprite *> sprites_enemy;
+    initSpritesEnemy(sprites_enemy_file, sprites_enemy, ENEMY_SPRITES_COUNT);
+
     GameMap map;
     initMap(map);
 
     Hero hero;
     initHero(hero);
+
+    Enemy enemy;
+    initEnemy(enemy);
 
     sf::RenderWindow window;
     createWindow(window);
@@ -530,11 +597,12 @@ int main(int, char *[])
     while (window.isOpen())
     {
         handleEvents(window, hero);
-        update(clock, game, hero, map);
+        update(clock, game, hero, enemy, map);
         window.clear();
 
         renderMap(window, map, sprites_map);
         renderHero(window, sprites_hero, hero);
+        renderEnemy(window, sprites_enemy, enemy);
 
         window.display();
     }
