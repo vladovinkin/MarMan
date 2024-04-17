@@ -47,6 +47,7 @@ struct Hero
     sf::Vector2f position;
     Direction direction;
     Direction directionDesired;
+    bool catched;
 };
 
 struct Enemy
@@ -78,8 +79,15 @@ void renderHero(sf::RenderWindow &, std::vector<Sprite *>);
 void clearSprites(std::vector<Sprite *> &);
 void updatePackman(Hero &, float, const GameMap &);
 void calcCollisionsItems(Hero &, Game &game, GameMap &);
+void calcCollisionsEnemies(Hero &, Enemy &);
 
 // -- определения функций --
+
+float Distance(sf::Vector2f from, sf::Vector2f to)
+{
+    sf::Vector2f delta = to - from;
+    return sqrt(delta.x * delta.x + delta.y * delta.y);
+}
 
 // Функция создаёт окно приложения.
 void createWindow(sf::RenderWindow &window)
@@ -339,12 +347,13 @@ void initHero(Hero &hero)
     hero.position = HERO_INITIAL_POSITION;
     hero.direction = Direction::LEFT;
     hero.directionDesired = Direction::NONE;
+    hero.catched = false;
 }
 
 void initEnemy(Enemy &enemy)
 {
     enemy.position = {
-        MAP_SPRITE_SIZE * 14,
+        MAP_SPRITE_SIZE * 16 + 1,
         MAP_SPRITE_SIZE * 11 + MAP_SPRITE_SIZE_HALF,
     };
     enemy.direction = Direction::NONE;
@@ -535,14 +544,26 @@ void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
     }
 }
 
+void calcCollisionsEnemies(Hero &pacman, Enemy &enemy)
+{
+    float distance = Distance(pacman.position, enemy.position);
+    if (static_cast<int>(distance) < 24)
+    {
+        pacman.catched = true;
+    }
+}
+
 void update(sf::Clock &clock, Game &game, Hero &pacman, Enemy &enemy, GameMap &map)
 {
     const float elapsedTime = clock.getElapsedTime().asSeconds();
     clock.restart();
-    updatePackman(pacman, elapsedTime, map);
+    if (!pacman.catched)
+    {
+        updatePackman(pacman, elapsedTime, map);
+    }
     // updateEnemies(pacman, enemy);
     calcCollisionsItems(pacman, game, map);
-    // calcCollisionsEnemies(packman, enemy);
+    calcCollisionsEnemies(pacman, enemy);
 }
 
 int main(int, char *[])
