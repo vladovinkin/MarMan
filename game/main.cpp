@@ -703,23 +703,62 @@ void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap 
         // 1. Куда идти дальше (исключаем назад и если впереди стенка - то и вперёд)
         std::set<char> directions = getPossibleDirections(posStartMapX, posStartMapY, enemy.direction, map);
 
+        // вычисляем направление по приоритетам
         Direction newDir = defineDirection(pacman, enemy, directions);
-        std::cout << getCharByDirection(newDir) << "\n\n";
 
         // 2. Если надо - сменить направление и пересчитать координаты
-
-        if (!isNextStepPossible(posStartMapX, posStartMapY, enemy.direction, map))
+        if (newDir != enemy.direction)
         {
+            // от старта до центра
+            float beginStep;
             switch (enemy.direction)
             {
-            case Direction::LEFT:
-                enemy.direction = Direction::RIGHT;
+            case Direction::UP:
+            case Direction::DOWN:
+                beginStep = fabs(static_cast<float>(spriteCenterY) - posStart.y);
                 break;
             case Direction::RIGHT:
-                enemy.direction = Direction::LEFT;
+            case Direction::LEFT:
+                beginStep = fabs(static_cast<float>(spriteCenterX) - posStart.x);
                 break;
             }
+
+            // от центра до нового направления
+            float endStep = step - beginStep;
+            enemy.position.x = static_cast<float>(spriteCenterX);
+            enemy.position.y = static_cast<float>(spriteCenterY);
+            switch (newDir)
+            {
+            case Direction::UP:
+                enemy.position.y -= endStep;
+                break;
+            case Direction::DOWN:
+                enemy.position.y += endStep;
+                break;
+            case Direction::RIGHT:
+                enemy.position.x += endStep;
+                break;
+            case Direction::LEFT:
+                enemy.position.x -= endStep;
+                break;
+            }
+
+            // сменить направление
+            enemy.direction = newDir;
         }
+
+        // if (!isNextStepPossible(posStartMapX, posStartMapY, enemy.direction, map))
+        // {
+        //     switch (enemy.direction)
+        //     {
+        //     case Direction::LEFT:
+        //         enemy.direction = Direction::RIGHT;
+        //         break;
+        //     case Direction::RIGHT:
+        //         enemy.direction = Direction::LEFT;
+        //         break;
+        //     }
+        // }
         else
         {
             enemy.position = posFinish;
