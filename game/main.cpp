@@ -122,13 +122,16 @@ char getCharByDirection(Direction dir)
     return 'N';
 }
 
-void printDirections(std::set<char> dirs)
+char getFirstDirection(const std::set<char> &dirs)
 {
-    for (int item : dirs)
+    if (dirs.size())
     {
-        std::cout << item << "\t";
+        for (char item : dirs)
+        {
+            return item;
+        }
     }
-    std::cout << '\n';
+    return 'N';
 }
 
 char getDirPrimary(const Hero &pacman, const Enemy &enemy)
@@ -139,10 +142,11 @@ char getDirPrimary(const Hero &pacman, const Enemy &enemy)
     {
         return deltaX < 0 ? 'R' : 'L';
     }
-    else
+    if (abs(deltaX) < abs(deltaY))
     {
         return deltaY < 0 ? 'D' : 'U';
     }
+    return 'N';
 }
 
 char getDirSecondary(const Hero &pacman, const Enemy &enemy)
@@ -153,10 +157,11 @@ char getDirSecondary(const Hero &pacman, const Enemy &enemy)
     {
         return deltaY < 0 ? 'D' : 'U';
     }
-    else
+    if (abs(deltaX) < abs(deltaY))
     {
         return deltaX < 0 ? 'R' : 'L';
     }
+    return 'N';
 }
 
 std::set<char> getPossibleDirections(int posMapX, int posMapY, Direction curDirection, const GameMap &map)
@@ -198,6 +203,41 @@ bool isNextStepPossible(int posMapX, int posMapY, Direction curDirection, const 
         return map[posMapY][posMapX - 1] <= 2;
     }
     return true;
+}
+
+Direction defineDirection(const Hero &pacman, const Enemy &enemy, std::set<char> &directions)
+{
+    char dir = getDirPrimary(pacman, enemy);
+
+    if (directions.count(dir))
+    {
+        // длинная ось до игрока
+        return getDirectionByChar(dir);
+    }
+    else
+    {
+        directions.erase(dir);
+        dir = getDirSecondary(pacman, enemy);
+        if (directions.count(dir))
+        {
+            // короткая ось до игрока
+            return getDirectionByChar(dir);
+        }
+        else
+        {
+            dir = getCharByDirection(enemy.direction);
+            if (directions.count(dir))
+            {
+                // текущее направление движения
+                return getDirectionByChar(dir);
+            }
+            else
+            {
+                directions.erase(dir);
+                getDirectionByChar(getFirstDirection(directions));
+            }
+        }
+    }
 }
 
 // Функция создаёт окно приложения.
@@ -656,50 +696,18 @@ void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap 
             intersected = ((spriteCenterX - posStart.x) * (spriteCenterX - posFinish.x)) < 0;
             break;
         }
-
-        // если старт в центре или есть пересечение центра в результате следования по
-        // прежней траектории, проверить
     }
 
     if (intersected)
     {
         // 1. Куда идти дальше (исключаем назад и если впереди стенка - то и вперёд)
         std::set<char> directions = getPossibleDirections(posStartMapX, posStartMapY, enemy.direction, map);
-        printDirections(directions);
 
-        char dir = getDirPrimary(pacman, enemy);
+        Direction newDir = defineDirection(pacman, enemy, directions);
+        std::cout << getCharByDirection(newDir) << "\n\n";
 
-        if (directions.count(dir))
-        {
-            std::cout << "Dir primary: " << dir << '\n';
-        }
-        else
-        {
-            directions.erase(dir);
-            printDirections(directions);
+        // 2. Если надо - сменить направление и пересчитать координаты
 
-            dir = getDirSecondary(pacman, enemy);
-            if (directions.count(dir))
-            {
-                directions.erase(dir);
-                printDirections(directions);
-
-                std::cout << "Dir secondary: " << dir << '\n';
-            }
-            else
-            {
-                dir = getCharByDirection(enemy.direction);
-                if (directions.count(dir))
-                {
-                    std::cout << "Only current: " << getCharByDirection(enemy.direction) << '\n';
-                }
-                else
-                {
-                    directions.erase(dir);
-                    printDirections(directions);
-                }
-            }
-        }
         if (!isNextStepPossible(posStartMapX, posStartMapY, enemy.direction, map))
         {
             switch (enemy.direction)
@@ -714,16 +722,13 @@ void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap 
         }
         else
         {
-            enemy.position = posFinish;            
+            enemy.position = posFinish;
         }
     }
-    else
+    else // 3. Если оставляем прежнее направление - всё уже посчитано (только внести данные в объект).
     {
         enemy.position = posFinish;
     }
-
-    // 2. Если надо - сменить направление и пересчитать координаты
-    // 3. Если оставляем прежнее направление - всё уже посчитано (только внести данные в объект).
 }
 
 void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
