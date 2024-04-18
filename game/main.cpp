@@ -2,6 +2,7 @@
 #include <iostream>
 #include <array>
 #include <cmath>
+#include <set>
 
 // -- объ€влени€ констант --
 constexpr unsigned ANTIALIASING_LEVEL = 8;
@@ -87,6 +88,116 @@ float Distance(sf::Vector2f from, sf::Vector2f to)
 {
     sf::Vector2f delta = to - from;
     return sqrt(delta.x * delta.x + delta.y * delta.y);
+}
+
+Direction getDirectionByChar(char d)
+{
+    switch (d)
+    {
+    case 'U':
+        return Direction::UP;
+    case 'R':
+        return Direction::RIGHT;
+    case 'D':
+        return Direction::DOWN;
+    case 'L':
+        return Direction::LEFT;
+    }
+    return Direction::NONE;
+}
+
+char getCharByDirection(Direction dir)
+{
+    switch (dir)
+    {
+    case Direction::UP:
+        return 'U';
+    case Direction::RIGHT:
+        return 'R';
+    case Direction::DOWN:
+        return 'D';
+    case Direction::LEFT:
+        return 'L';
+    }
+    return 'N';
+}
+
+void printDirections(std::set<char> dirs)
+{
+    for (int item : dirs)
+    {
+        std::cout << item << "\t";
+    }
+    std::cout << '\n';
+}
+
+char getDirPrimary(const Hero &pacman, const Enemy &enemy)
+{
+    int deltaX = static_cast<int>(enemy.position.x - pacman.position.x);
+    int deltaY = static_cast<int>(enemy.position.y - pacman.position.y);
+    if (abs(deltaX) > abs(deltaY))
+    {
+        return deltaX < 0 ? 'R' : 'L';
+    }
+    else
+    {
+        return deltaY < 0 ? 'D' : 'U';
+    }
+}
+
+char getDirSecondary(const Hero &pacman, const Enemy &enemy)
+{
+    int deltaX = static_cast<int>(enemy.position.x - pacman.position.x);
+    int deltaY = static_cast<int>(enemy.position.y - pacman.position.y);
+    if (abs(deltaX) > abs(deltaY))
+    {
+        return deltaY < 0 ? 'D' : 'U';
+    }
+    else
+    {
+        return deltaX < 0 ? 'R' : 'L';
+    }
+}
+
+std::set<char> getPossibleDirections(int posMapX, int posMapY, Direction curDirection, const GameMap &map)
+{
+    std::set<char> directions;
+
+    // добавл€ем направление, если оно свободно и не противоположно движению
+    if (curDirection != Direction::DOWN && map[posMapY - 1][posMapX] <= 2)
+    {
+        directions.insert('U');
+    }
+    if (curDirection != Direction::UP && map[posMapY + 1][posMapX] <= 2)
+    {
+        directions.insert('D');
+    }
+    if (curDirection != Direction::RIGHT && map[posMapY][posMapX - 1] <= 2)
+    {
+        directions.insert('L');
+    }
+    if (curDirection != Direction::LEFT && map[posMapY][posMapX + 1] <= 2)
+    {
+        directions.insert('R');
+    }
+
+    return directions;
+}
+
+bool isNextStepPossible(int posMapX, int posMapY, Direction curDirection, const GameMap &map)
+{
+    switch (curDirection)
+    {
+    case Direction::UP:
+        return map[posMapY - 1][posMapX] <= 2;
+    case Direction::RIGHT:
+        return map[posMapY][posMapX + 1] <= 2;
+    case Direction::DOWN:
+        return map[posMapY + 1][posMapX] <= 2;
+    case Direction::LEFT:
+        return map[posMapY][posMapX - 1] <= 2;
+    }
+    return true;
 }
 
 // ‘ункци€ создаЄт окно приложени€.
@@ -353,10 +464,10 @@ void initHero(Hero &hero)
 void initEnemy(Enemy &enemy)
 {
     enemy.position = {
-        MAP_SPRITE_SIZE * 16 + 1,
+        MAP_SPRITE_SIZE * 15,
         MAP_SPRITE_SIZE * 11 + MAP_SPRITE_SIZE_HALF,
     };
-    enemy.direction = Direction::NONE;
+    enemy.direction = Direction::LEFT;
 }
 
 void clearSprites(std::vector<Sprite *> &sprites_map)
@@ -487,6 +598,134 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
     pacman.position = position;
 }
 
+void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap &map)
+{
+    const float step = PACKMAN_SPEED * elapsedTime; // весь путь на итерацию
+    sf::Vector2f posStart = enemy.position;
+    sf::Vector2f posFinish = posStart;
+
+    switch (enemy.direction)
+    {
+    case Direction::UP:
+        posFinish.y -= step;
+        break;
+    case Direction::DOWN:
+        posFinish.y += step;
+        break;
+    case Direction::LEFT:
+        posFinish.x -= step;
+        break;
+    case Direction::RIGHT:
+        posFinish.x += step;
+        break;
+    }
+
+    int posStartMapY = static_cast<int>(posStart.y) / MAP_SPRITE_SIZE;
+    int posStartMapX = static_cast<int>(posStart.x) / MAP_SPRITE_SIZE;
+
+    int spriteCenterX = posStartMapX * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
+    int spriteCenterY = posStartMapY * MAP_SPRITE_SIZE + MAP_SPRITE_SIZE_HALF;
+
+    // вы€снение пересечение центра в результате хода
+    bool intersected = false;
+
+    // вы€снить, может старт уже в центре
+    switch (enemy.direction)
+    {
+    case Direction::UP:
+    case Direction::DOWN:
+        intersected = static_cast<int>(posStart.y) == spriteCenterY;
+        break;
+    case Direction::RIGHT:
+    case Direction::LEFT:
+        intersected = static_cast<int>(posStart.x) == spriteCenterX;
+        break;
+    }
+
+    // если не в центре, то может пересекаем в результате хода?
+    if (!intersected)
+    {
+        switch (enemy.direction)
+        {
+        case Direction::UP:
+        case Direction::DOWN:
+            intersected = ((spriteCenterY - posStart.y) * (spriteCenterY - posFinish.y)) < 0;
+            break;
+        case Direction::RIGHT:
+        case Direction::LEFT:
+            intersected = ((spriteCenterX - posStart.x) * (spriteCenterX - posFinish.x)) < 0;
+            break;
+        }
+
+        // если старт в центре или есть пересечение центра в результате следовани€ по
+        // прежней траектории, проверить
+    }
+
+    if (intersected)
+    {
+        // 1.  уда идти дальше (исключаем назад и если впереди стенка - то и вперЄд)
+        std::set<char> directions = getPossibleDirections(posStartMapX, posStartMapY, enemy.direction, map);
+        printDirections(directions);
+
+        char dir = getDirPrimary(pacman, enemy);
+
+        if (directions.count(dir))
+        {
+            std::cout << "Dir primary: " << dir << '\n';
+        }
+        else
+        {
+            directions.erase(dir);
+            printDirections(directions);
+
+            dir = getDirSecondary(pacman, enemy);
+            if (directions.count(dir))
+            {
+                directions.erase(dir);
+                printDirections(directions);
+
+                std::cout << "Dir secondary: " << dir << '\n';
+            }
+            else
+            {
+                dir = getCharByDirection(enemy.direction);
+                if (directions.count(dir))
+                {
+                    std::cout << "Only current: " << getCharByDirection(enemy.direction) << '\n';
+                }
+                else
+                {
+                    directions.erase(dir);
+                    printDirections(directions);
+                }
+            }
+        }
+        if (!isNextStepPossible(posStartMapX, posStartMapY, enemy.direction, map))
+        {
+            switch (enemy.direction)
+            {
+            case Direction::LEFT:
+                enemy.direction = Direction::RIGHT;
+                break;
+            case Direction::RIGHT:
+                enemy.direction = Direction::LEFT;
+                break;
+            }
+        }
+        else
+        {
+            enemy.position = posFinish;            
+        }
+    }
+    else
+    {
+        enemy.position = posFinish;
+    }
+
+    // 2. ≈сли надо - сменить направление и пересчитать координаты
+    // 3. ≈сли оставл€ем прежнее направление - всЄ уже посчитано (только внести данные в объект).
+}
+
 void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
 {
     /*
@@ -560,8 +799,8 @@ void update(sf::Clock &clock, Game &game, Hero &pacman, Enemy &enemy, GameMap &m
     if (!pacman.catched)
     {
         updatePackman(pacman, elapsedTime, map);
+        updateEnemies(pacman, elapsedTime, enemy, map);
     }
-    // updateEnemies(pacman, enemy);
     calcCollisionsItems(pacman, game, map);
     calcCollisionsEnemies(pacman, enemy);
 }
