@@ -42,7 +42,9 @@ constexpr unsigned COIN_ITEM_COST = 10;
 constexpr unsigned STAR_ITEM_COST = 50;
 constexpr unsigned LIVE_COST_IN_COINS = 300;
 
-static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE_HALF};
+constexpr unsigned MODE_TIME = 3.f;
+
+static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 23 + MAP_SPRITE_SIZE_HALF};
 
 typedef std::array<std::array<int, GAME_MAP_WIDTH>, GAME_MAP_HEIGHT> GameMap;
 
@@ -75,6 +77,7 @@ struct Root
 {
     int unsigned highScore;
     Mode mode;
+    float modeTimer;
 };
 
 struct Hero
@@ -440,23 +443,38 @@ bool initSpritesText(sf::Image sprites_file, std::vector<Sprite *> &sprites, int
 }
 
 // Функция обрабатывает все события, скопившиеся в очереди событий SFML.
-void handleEvents(sf::RenderWindow &window, Hero &pacman)
+void handleEvents(sf::RenderWindow &window, const Root &root, const Game &game, Hero &pacman)
 {
     sf::Event event;
-    while (window.pollEvent(event))
+
+    switch (root.mode)
     {
-        if (event.type == sf::Event::Closed)
+    case Mode::STAGE:
+        while (window.pollEvent(event))
         {
-            window.close();
+            if (event.type == sf::Event::Closed)
+            {
+                window.close();
+            }
         }
-        else if (event.type == sf::Event::KeyPressed)
+        break;
+    case Mode::GAME:
+        while (window.pollEvent(event))
         {
-            handlePackmanKeyPress(event.key, pacman);
+            switch (event.type)
+            {
+            case sf::Event::Closed:
+                window.close();
+                break;
+            case sf::Event::KeyPressed:
+                handlePackmanKeyPress(event.key, pacman);
+                break;
+            case sf::Event::KeyReleased:
+                handlePackmanKeyRelease(event.key, pacman);
+                break;
+            }
         }
-        else if (event.type == sf::Event::KeyReleased)
-        {
-            handlePackmanKeyRelease(event.key, pacman);
-        }
+        break;
     }
 }
 
@@ -600,7 +618,8 @@ void renderInfo(sf::RenderWindow &window, Root &root, Game &game, std::vector<Sp
 void initRoot(Root &root)
 {
     root.highScore = 10000;
-    root.mode = Mode::GAME;
+    root.mode = Mode::STAGE;
+    root.modeTimer = 0.0;
 }
 
 void initGame(Game &game)
@@ -661,7 +680,7 @@ void initHero(Hero &hero)
 void initEnemy(Enemy &enemy)
 {
     enemy.position = {
-        MAP_SPRITE_SIZE * 15,
+        MAP_SPRITE_SIZE * 14,
         MAP_SPRITE_SIZE * 11 + MAP_SPRITE_SIZE_HALF,
     };
     enemy.direction = Direction::LEFT;
@@ -1010,13 +1029,37 @@ void update(sf::Clock &clock, Root &root, Game &game, Hero &pacman, Enemy &enemy
 {
     const float elapsedTime = clock.getElapsedTime().asSeconds();
     clock.restart();
-    if (!pacman.catched)
+    switch (root.mode)
     {
-        updatePacman(pacman, elapsedTime, map);
-        updateEnemies(pacman, elapsedTime, enemy, map);
+    case Mode::GAME:
+        if (!pacman.catched)
+        {
+            updatePacman(pacman, elapsedTime, map);
+            updateEnemies(pacman, elapsedTime, enemy, map);
+        }
+        calcCollisionsItems(root, game, pacman, map);
+        calcCollisionsEnemies(pacman, enemy);
+        break;
+    case Mode::STAGE:
+        root.modeTimer += elapsedTime;
+        if (root.modeTimer >= MODE_TIME)
+        {
+            initMap(map);
+            initHero(pacman);
+            initEnemy(enemy);
+            root.modeTimer = 0.0;
+            root.mode = Mode::READY;
+        }
+        break;
+    case Mode::READY:
+        root.modeTimer += elapsedTime;
+        if (root.modeTimer >= MODE_TIME)
+        {
+            root.modeTimer = 0.0;
+            root.mode = Mode::GAME;
+        }
+        break;
     }
-    calcCollisionsItems(root, game, pacman, map);
-    calcCollisionsEnemies(pacman, enemy);
 }
 
 int main(int, char *[])
@@ -1079,42 +1122,54 @@ int main(int, char *[])
     initGame(game);
 
     GameMap map;
-    initMap(map);
-
     Hero hero;
-    initHero(hero);
-
     Enemy enemy;
-    initEnemy(enemy);
 
     sf::RenderWindow window;
     createWindow(window);
 
     sf::Clock clock;
+
     while (window.isOpen())
     {
+        handleEvents(window, root, game, hero);
+        update(clock, root, game, hero, enemy, map);
+        window.clear();
+
         switch (root.mode)
         {
         case Mode::STAGE:
+            // renderStage();
             break;
         case Mode::READY:
-            break;
-        case Mode::GAME:
-            handleEvents(window, hero);
-            update(clock, root, game, hero, enemy, map);
-            window.clear();
-
             renderMap(window, map, sprites_map);
             renderHero(window, sprites_hero, hero);
             renderEnemy(window, sprites_enemy, enemy);
             renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
-
+            // renderReady();
+        case Mode::GAME:
+            renderMap(window, map, sprites_map);
+            renderHero(window, sprites_hero, hero);
+            renderEnemy(window, sprites_enemy, enemy);
+            renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
             break;
         case Mode::GAME_OVER:
+            renderMap(window, map, sprites_map);
+            renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
+            // renderGameOver();
             break;
         case Mode::COMPLETE:
+            renderMap(window, map, sprites_map);
+            renderHero(window, sprites_hero, hero);
+            renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
+            // renderComplete();
             break;
         case Mode::CATCHED:
+            renderMap(window, map, sprites_map);
+            renderHero(window, sprites_hero, hero);
+            renderEnemy(window, sprites_enemy, enemy);
+            renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
+            // renderCatched();
             break;
         }
 
