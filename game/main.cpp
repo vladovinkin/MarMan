@@ -296,6 +296,21 @@ void createWindow(sf::RenderWindow &window)
     window.setFramerateLimit(MAX_FPS);
 }
 
+bool handleGameOverKeyPress(const sf::Event::KeyEvent &event, Root &root, Game &game)
+{
+    bool handled = true;
+    if (event.code == sf::Keyboard::Space)
+    {
+        initGame(game);
+        root.mode = Mode::STAGE;
+    }
+    else
+    {
+        handled = false;
+    }
+    return handled;
+}
+
 bool handlePacmanKeyPress(const sf::Event::KeyEvent &event, Hero &pacman)
 {
     bool handled = true;
@@ -445,24 +460,12 @@ bool initSpritesText(sf::Image sprites_file, std::vector<Sprite *> &sprites, int
 }
 
 // Функция обрабатывает все события, скопившиеся в очереди событий SFML.
-void handleEvents(sf::RenderWindow &window, const Root &root, const Game &game, Hero &pacman)
+void handleEvents(sf::RenderWindow &window, Root &root, Game &game, Hero &pacman)
 {
     sf::Event event;
 
     switch (root.mode)
     {
-    case Mode::STAGE:
-    case Mode::READY:
-    case Mode::CATCHED:
-    case Mode::COMPLETE:
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-            {
-                window.close();
-            }
-        }
-        break;
     case Mode::GAME:
         while (window.pollEvent(event))
         {
@@ -476,6 +479,32 @@ void handleEvents(sf::RenderWindow &window, const Root &root, const Game &game, 
                 break;
             case sf::Event::KeyReleased:
                 handlePacmanKeyRelease(event.key, pacman);
+                break;
+            }
+        }
+        break;
+    case Mode::STAGE:
+    case Mode::READY:
+    case Mode::CATCHED:
+    case Mode::COMPLETE:
+        while (window.pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+            {
+                window.close();
+            }
+        }
+        break;
+    case Mode::GAME_OVER:
+        while (window.pollEvent(event))
+        {
+            switch (event.type)
+            {
+            case sf::Event::Closed:
+                window.close();
+                break;
+            case sf::Event::KeyPressed:
+                handleGameOverKeyPress(event.key, root, game);
                 break;
             }
         }
@@ -1115,15 +1144,6 @@ void update(sf::Clock &clock, Root &root, Game &game, Hero &pacman, Enemy &enemy
                 game.lives--;
                 root.mode = Mode::READY;
             }
-        }
-        break;
-    case Mode::GAME_OVER:
-        root.modeTimer += elapsedTime;
-        if (root.modeTimer >= MODE_TIME)
-        {
-            initGame(game);
-            root.modeTimer = 0.0;
-            root.mode = Mode::STAGE;
         }
         break;
     case Mode::COMPLETE:
