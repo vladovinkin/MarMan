@@ -31,6 +31,7 @@ constexpr unsigned ENEMY_SPEED_INITIAL = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
 constexpr unsigned COIN_ITEM_COST = 10;
 constexpr unsigned STAR_ITEM_COST = 50;
+constexpr unsigned LIVE_COST_IN_COINS = 300;
 
 static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE_HALF};
 
@@ -971,6 +972,11 @@ void calcCollisionsItems(Root &root, Game &game, Hero &pacman, GameMap &map)
             if (nextSpriteValue == 1)
             {
                 game.coins++;
+                if (game.coins == LIVE_COST_IN_COINS)
+                {
+                    game.coins = 0;
+                    game.lives++;
+                }
                 increaseScore(root, game, COIN_ITEM_COST);
             }
             else
