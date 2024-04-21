@@ -450,6 +450,9 @@ void handleEvents(sf::RenderWindow &window, const Root &root, const Game &game, 
     switch (root.mode)
     {
     case Mode::STAGE:
+    case Mode::READY:
+    case Mode::CATCHED:
+    case Mode::COMPLETE:
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
@@ -613,6 +616,15 @@ void renderInfo(sf::RenderWindow &window, Root &root, Game &game, std::vector<Sp
         renderText(window, sprites_text, sf::Vector2f(734.0, 590.0), 8);
         printNumber(window, sprites_digits, sf::Vector2f(774.0, 590.0), game.lives);
     }
+}
+
+void renderStage(sf::RenderWindow &window, const Game &game, std::vector<Sprite *> sprites_text, std::vector<Sprite *> sprites_digits, std::vector<Sprite *> sprites_hero)
+{
+    renderText(window, sprites_text, sf::Vector2f(380.0, 300.0), 7);
+    printNumber(window, sprites_digits, sf::Vector2f(500.0, 300.0), game.stage);
+    renderHeroLives(window, sprites_hero, sf::Vector2f(406.0, 370.0));
+    renderText(window, sprites_text, sf::Vector2f(440.0, 360.0), 8);
+    printNumber(window, sprites_digits, sf::Vector2f(480.0, 360.0), game.lives);
 }
 
 void initRoot(Root &root)
@@ -1002,7 +1014,10 @@ void calcCollisionsItems(Root &root, Game &game, Hero &pacman, GameMap &map)
                 if (game.coins == LIVE_COST_IN_COINS)
                 {
                     game.coins = 0;
-                    game.lives++;
+                    if (game.lives < 9)
+                    {
+                        game.lives++;
+                    }
                 }
                 increaseScore(root, game, COIN_ITEM_COST);
             }
@@ -1139,14 +1154,14 @@ int main(int, char *[])
         switch (root.mode)
         {
         case Mode::STAGE:
-            // renderStage();
+            renderStage(window, game, sprites_text, sprites_digits, sprites_hero);
             break;
         case Mode::READY:
             renderMap(window, map, sprites_map);
             renderHero(window, sprites_hero, hero);
             renderEnemy(window, sprites_enemy, enemy);
             renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
-            // renderReady();
+            // renderReady(window, sprites_text);
         case Mode::GAME:
             renderMap(window, map, sprites_map);
             renderHero(window, sprites_hero, hero);
