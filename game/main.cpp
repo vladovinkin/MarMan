@@ -23,12 +23,14 @@ constexpr unsigned ENEMY_SPRITE_HEIGHT = 42;
 constexpr unsigned ENEMY_SPRITE_WIDTH = 42;
 constexpr unsigned DIGITS_SPRITES_COUNT = 10;
 constexpr unsigned DIGITS_SPRITE_SIZE = 20;
-constexpr unsigned TEXT_SPRITES_COUNT = 8;
+constexpr unsigned TEXT_SPRITES_COUNT = 9;
 constexpr unsigned TEXT_SPRITE_HEIGHT = 20;
-constexpr std::array<int, 8> TEXT_SPRITE_WIDTH{82, 102, 62, 120, 80, 80, 102, 102};
+constexpr std::array<int, TEXT_SPRITES_COUNT> TEXT_SPRITE_WIDTH{82, 102, 62, 120, 80, 80, 102, 102, 20};
 constexpr unsigned HERO_SPEED_INITIAL = 100.f;
 constexpr unsigned ENEMY_SPEED_INITIAL = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
+constexpr unsigned COIN_ITEM_COST = 10;
+constexpr unsigned STAR_ITEM_COST = 50;
 
 static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE_HALF};
 
@@ -47,6 +49,11 @@ enum struct Direction
     DOWN,
     LEFT,
     RIGHT
+};
+
+struct Root
+{
+    int unsigned highScore;
 };
 
 struct Hero
@@ -75,7 +82,6 @@ struct Game
     int unsigned coins;
     int unsigned stars;
     int unsigned score;
-    int unsigned highScore;
     int unsigned stage;
 };
 
@@ -481,6 +487,20 @@ void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero he
     delete sprite;
 }
 
+void renderHeroLives(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Vector2f position)
+{
+    Sprite *sprite;
+
+    sprite = sprites[0];
+    sprite->s.setScale(1, 1);
+
+    sprite->s.setPosition(position);
+    window.draw(sprite->s);
+
+    sprite = NULL;
+    delete sprite;
+}
+
 void renderEnemy(sf::RenderWindow &window, std::vector<Sprite *> sprites, Enemy enemy)
 {
     Sprite *sprite;
@@ -507,6 +527,19 @@ void renderDigit(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Ve
     delete sprite;
 }
 
+void renderText(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Vector2f position, int itemNumber)
+{
+    Sprite *sprite;
+
+    sprite = sprites[itemNumber];
+
+    sprite->s.setPosition(position);
+    window.draw(sprite->s);
+
+    sprite = NULL;
+    delete sprite;
+}
+
 void printNumber(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Vector2f position, int unsigned value)
 {
     int unsigned i = 0;
@@ -519,19 +552,42 @@ void printNumber(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Ve
     } while (value != 0);
 }
 
-void renderInfo(sf::RenderWindow &window, Game &game, std::vector<Sprite *> sprites_text, std::vector<Sprite *> sprites_digits, std::vector<Sprite *> sprites_hero)
+void renderInfo(sf::RenderWindow &window, Root &root, Game &game, std::vector<Sprite *> sprites_text, std::vector<Sprite *> sprites_digits, std::vector<Sprite *> sprites_hero)
 {
-    printNumber(window, sprites_digits, sf::Vector2f(800.0, 24.0), game.score);
+    renderText(window, sprites_text, sf::Vector2f(690.0, 24.0), 0);
+    renderText(window, sprites_text, sf::Vector2f(790.0, 24.0), 1);
+    printNumber(window, sprites_digits, sf::Vector2f(870.0, 48.0), root.highScore);
+    renderText(window, sprites_text, sf::Vector2f(690.0, 96.0), 2);
+    printNumber(window, sprites_digits, sf::Vector2f(870.0, 120.0), game.score);
+    renderText(window, sprites_text, sf::Vector2f(690.0, 168.0), 6);
+    printNumber(window, sprites_digits, sf::Vector2f(870.0, 192.0), game.coins);
+    if (game.lives < 4)
+    {
+        for (int i = 0; i < game.lives; i++)
+        {
+            renderHeroLives(window, sprites_hero, sf::Vector2f(690.0 + HERO_SPRITE_WIDTH / 2 + 36.0 * i, 600.0));
+        }
+    }
+    else
+    {
+        renderHeroLives(window, sprites_hero, sf::Vector2f(690.0 + HERO_SPRITE_WIDTH / 2, 600.0));
+        renderText(window, sprites_text, sf::Vector2f(734.0, 590.0), 8);
+        printNumber(window, sprites_digits, sf::Vector2f(774.0, 590.0), game.lives);
+    }
+}
+
+void initRoot(Root &root)
+{
+    root.highScore = 10000;
 }
 
 void initGame(Game &game)
 {
-    game.stage = 1;
     game.lives = 2;
+    game.stage = 1;
     game.coins = 0;
     game.stars = 0;
     game.score = 0;
-    game.highScore = 0;
 }
 
 void initMap(GameMap &map)
@@ -859,7 +915,17 @@ void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap 
     enemy.curSpriteNum = stepsNum % 2;
 }
 
-void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
+void increaseScore(Root &root, Game &game, int addon)
+{
+    game.score += addon;
+
+    if (game.score > root.highScore)
+    {
+        root.highScore = game.score;
+    }
+}
+
+void calcCollisionsItems(Root &root, Game &game, Hero &pacman, GameMap &map)
 {
     /*
     найти место на карте, куда наступаем (текущая координата игрока + пол размера спрайта)
@@ -905,15 +971,14 @@ void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
             if (nextSpriteValue == 1)
             {
                 game.coins++;
-                game.score += 10;
+                increaseScore(root, game, COIN_ITEM_COST);
             }
             else
             {
                 game.stars++;
-                game.score += 50;
+                increaseScore(root, game, STAR_ITEM_COST);
             }
             map[nextMapPositionY][nextMapPositionX] = 0;
-            std::cout << "Coins: " << game.coins << " ; Stars: " << game.stars << '\n';
         }
     }
 }
@@ -927,7 +992,7 @@ void calcCollisionsEnemies(Hero &pacman, Enemy &enemy)
     }
 }
 
-void update(sf::Clock &clock, Game &game, Hero &pacman, Enemy &enemy, GameMap &map)
+void update(sf::Clock &clock, Root &root, Game &game, Hero &pacman, Enemy &enemy, GameMap &map)
 {
     const float elapsedTime = clock.getElapsedTime().asSeconds();
     clock.restart();
@@ -936,14 +1001,14 @@ void update(sf::Clock &clock, Game &game, Hero &pacman, Enemy &enemy, GameMap &m
         updatePacman(pacman, elapsedTime, map);
         updateEnemies(pacman, elapsedTime, enemy, map);
     }
-    calcCollisionsItems(pacman, game, map);
+    calcCollisionsItems(root, game, pacman, map);
     calcCollisionsEnemies(pacman, enemy);
 }
 
 int main(int, char *[])
 {
-    Game game;
-    initGame(game);
+    Root root;
+    initRoot(root);
 
     sf::Image sprites_map_file;
     sf::Image sprites_hero_file;
@@ -996,6 +1061,9 @@ int main(int, char *[])
     std::vector<Sprite *> sprites_text;
     initSpritesText(sprites_text_file, sprites_text, TEXT_SPRITES_COUNT);
 
+    Game game;
+    initGame(game);
+
     GameMap map;
     initMap(map);
 
@@ -1012,13 +1080,13 @@ int main(int, char *[])
     while (window.isOpen())
     {
         handleEvents(window, hero);
-        update(clock, game, hero, enemy, map);
+        update(clock, root, game, hero, enemy, map);
         window.clear();
 
         renderMap(window, map, sprites_map);
         renderHero(window, sprites_hero, hero);
         renderEnemy(window, sprites_enemy, enemy);
-        renderInfo(window, game, sprites_text, sprites_digits, sprites_hero);
+        renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
 
         window.display();
     }
