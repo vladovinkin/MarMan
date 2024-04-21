@@ -61,6 +61,7 @@ struct Enemy
 {
     sf::Vector2f position;
     Direction direction;
+    float timeIteration;
     int curSpriteNum;
     float curSpeed;
 };
@@ -464,7 +465,7 @@ void renderEnemy(sf::RenderWindow &window, std::vector<Sprite *> sprites, Enemy 
 {
     Sprite *sprite;
 
-    sprite = sprites[0];
+    sprite = sprites[enemy.curSpriteNum];
 
     sprite->s.setPosition(enemy.position);
     window.draw(sprite->s);
@@ -561,7 +562,7 @@ void initEnemy(Enemy &enemy)
     };
     enemy.direction = Direction::LEFT;
     enemy.curSpeed = ENEMY_SPEED_INITIAL;
-    enemy.curSprite = 0;
+    enemy.curSpriteNum = 0;
 }
 
 void clearSprites(std::vector<Sprite *> &sprites_map)
@@ -692,7 +693,7 @@ void updatePacman(Hero &pacman, float elapsedTime, const GameMap &map)
     pacman.position = position;
 
     pacman.timeIteration += elapsedTime;
-    int stepsNum = static_cast<int>(pacman.timeIteration * pacman.curSpeed / 10.0);
+    int stepsNum = static_cast<int>(pacman.timeIteration * pacman.curSpeed / 12.0);
     pacman.curSpriteNum = stepsNum % 2;
 }
 
@@ -826,6 +827,10 @@ void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap 
     {
         enemy.position = posFinish;
     }
+
+    enemy.timeIteration += elapsedTime;
+    int stepsNum = static_cast<int>(enemy.timeIteration * enemy.curSpeed / 12.0);
+    enemy.curSpriteNum = stepsNum % 2;
 }
 
 void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
