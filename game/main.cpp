@@ -23,7 +23,8 @@ constexpr unsigned ENEMY_SPRITE_HEIGHT = 42;
 constexpr unsigned ENEMY_SPRITE_WIDTH = 42;
 constexpr unsigned DIGITS_SPRITES_COUNT = 10;
 constexpr unsigned DIGITS_SPRITE_SIZE = 20;
-constexpr unsigned PACKMAN_SPEED = 100.f;
+constexpr unsigned HERO_SPEED_INITIAL = 100.f;
+constexpr unsigned ENEMY_SPEED_INITIAL = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
 
 static const sf::Vector2f HERO_INITIAL_POSITION = {MAP_SPRITE_SIZE * 14, MAP_SPRITE_SIZE * 17 + MAP_SPRITE_SIZE_HALF};
@@ -51,12 +52,17 @@ struct Hero
     Direction direction;
     Direction directionDesired;
     bool catched;
+    float timeIteration;
+    int curSpriteNum;
+    float curSpeed;
 };
 
 struct Enemy
 {
     sf::Vector2f position;
     Direction direction;
+    int curSpriteNum;
+    float curSpeed;
 };
 
 struct Game
@@ -80,7 +86,7 @@ void handleEvents(sf::RenderWindow &, Hero &);
 void renderMap(sf::RenderWindow &, const GameMap &, Hero);
 void renderHero(sf::RenderWindow &, std::vector<Sprite *>);
 void clearSprites(std::vector<Sprite *> &);
-void updatePackman(Hero &, float, const GameMap &);
+void updatePacman(Hero &, float, const GameMap &);
 void calcCollisionsItems(Hero &, Game &game, GameMap &);
 void calcCollisionsEnemies(Hero &, Enemy &);
 
@@ -427,20 +433,20 @@ void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero he
     switch (hero.direction)
     {
     case Direction::LEFT:
-        sprite = sprites[0];
+        sprite = sprites[hero.curSpriteNum];
         sprite->s.setScale(-1, 1);
         break;
     case Direction::RIGHT:
-        sprite = sprites[0];
+        sprite = sprites[hero.curSpriteNum];
         sprite->s.setScale(1, 1);
         break;
     case Direction::UP:
         sprite = sprites[3];
-        // sprite->s.setScale(1, 1);
+        sprite->s.setScale(hero.curSpriteNum ? 1 : -1, 1);
         break;
     case Direction::DOWN:
         sprite = sprites[2];
-        // sprite->s.setScale(1, 1);
+        sprite->s.setScale(hero.curSpriteNum ? 1 : -1, 1);
         break;
     default:
         sprite = sprites[4];
@@ -489,13 +495,12 @@ void printNumber(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Ve
         value = value / 10;
         renderDigit(window, sprites, sf::Vector2f(position.x - static_cast<float>(i * DIGITS_SPRITE_SIZE), position.y), digit);
         i++;
-    }
-    while (value != 0);
+    } while (value != 0);
 }
 
 void initGame(Game &game)
 {
-    game.lives = 3;
+    game.lives = 2;
     game.coins = 0;
     game.stars = 0;
     game.score = 0;
@@ -543,6 +548,9 @@ void initHero(Hero &hero)
     hero.direction = Direction::LEFT;
     hero.directionDesired = Direction::NONE;
     hero.catched = false;
+    hero.curSpeed = HERO_SPEED_INITIAL;
+    hero.timeIteration = 0.0f;
+    hero.curSpriteNum = 0;
 }
 
 void initEnemy(Enemy &enemy)
@@ -552,6 +560,8 @@ void initEnemy(Enemy &enemy)
         MAP_SPRITE_SIZE * 11 + MAP_SPRITE_SIZE_HALF,
     };
     enemy.direction = Direction::LEFT;
+    enemy.curSpeed = ENEMY_SPEED_INITIAL;
+    enemy.curSprite = 0;
 }
 
 void clearSprites(std::vector<Sprite *> &sprites_map)
@@ -564,9 +574,9 @@ void clearSprites(std::vector<Sprite *> &sprites_map)
     sprites_map.clear();
 }
 
-void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
+void updatePacman(Hero &pacman, float elapsedTime, const GameMap &map)
 {
-    const float step = PACKMAN_SPEED * elapsedTime; // весь путь на итерацию
+    const float step = pacman.curSpeed * elapsedTime; // весь путь на итерацию
     sf::Vector2f position = pacman.position;
 
     int curMapPositionY = static_cast<int>(position.y) / MAP_SPRITE_SIZE;
@@ -680,11 +690,15 @@ void updatePackman(Hero &pacman, float elapsedTime, const GameMap &map)
         break;
     }
     pacman.position = position;
+
+    pacman.timeIteration += elapsedTime;
+    int stepsNum = static_cast<int>(pacman.timeIteration * pacman.curSpeed / 10.0);
+    pacman.curSpriteNum = stepsNum % 2;
 }
 
 void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap &map)
 {
-    const float step = PACKMAN_SPEED * elapsedTime; // весь путь на итерацию
+    const float step = enemy.curSpeed * elapsedTime; // весь путь на итерацию
     sf::Vector2f posStart = enemy.position;
     sf::Vector2f posFinish = posStart;
 
@@ -860,10 +874,12 @@ void calcCollisionsItems(Hero &pacman, Game &game, GameMap &map)
             if (nextSpriteValue == 1)
             {
                 game.coins++;
+                game.score += 10;
             }
             else
             {
                 game.stars++;
+                game.score += 50;
             }
             map[nextMapPositionY][nextMapPositionX] = 0;
             std::cout << "Coins: " << game.coins << " ; Stars: " << game.stars << '\n';
@@ -886,7 +902,7 @@ void update(sf::Clock &clock, Game &game, Hero &pacman, Enemy &enemy, GameMap &m
     clock.restart();
     if (!pacman.catched)
     {
-        updatePackman(pacman, elapsedTime, map);
+        updatePacman(pacman, elapsedTime, map);
         updateEnemies(pacman, elapsedTime, enemy, map);
     }
     calcCollisionsItems(pacman, game, map);
@@ -961,7 +977,7 @@ int main(int, char *[])
         renderMap(window, map, sprites_map);
         renderHero(window, sprites_hero, hero);
         renderEnemy(window, sprites_enemy, enemy);
-        printNumber(window, sprites_digits, sf::Vector2f(800.0, 24.0), game.coins);
+        printNumber(window, sprites_digits, sf::Vector2f(800.0, 24.0), game.score);
 
         window.display();
     }
