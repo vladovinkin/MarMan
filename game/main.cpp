@@ -627,6 +627,11 @@ void renderStage(sf::RenderWindow &window, const Game &game, std::vector<Sprite 
     printNumber(window, sprites_digits, sf::Vector2f(480.0, 360.0), game.lives);
 }
 
+void renderReady(sf::RenderWindow &window, std::vector<Sprite *> sprites_text)
+{
+    renderText(window, sprites_text, sf::Vector2f(288.0, 408.0), 3);
+}
+
 void initRoot(Root &root)
 {
     root.highScore = 10000;
@@ -1161,7 +1166,8 @@ int main(int, char *[])
             renderHero(window, sprites_hero, hero);
             renderEnemy(window, sprites_enemy, enemy);
             renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
-            // renderReady(window, sprites_text);
+            renderReady(window, sprites_text);
+            break;
         case Mode::GAME:
             renderMap(window, map, sprites_map);
             renderHero(window, sprites_hero, hero);
