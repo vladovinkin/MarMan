@@ -6,8 +6,8 @@
 
 // -- объ€влени€ констант --
 constexpr unsigned ANTIALIASING_LEVEL = 8;
-constexpr unsigned WINDOW_WIDTH = 800;
-constexpr unsigned WINDOW_HEIGHT = 800;
+constexpr unsigned WINDOW_WIDTH = 900;
+constexpr unsigned WINDOW_HEIGHT = 750;
 constexpr unsigned MAX_FPS = 60;
 constexpr unsigned MAP_SPRITES_WIDTH = 8;
 constexpr unsigned MAP_SPRITES_COUNT = 36;
@@ -21,6 +21,8 @@ constexpr unsigned HERO_SPRITE_HEIGHT = 42;
 constexpr unsigned ENEMY_SPRITES_COUNT = 2;
 constexpr unsigned ENEMY_SPRITE_HEIGHT = 42;
 constexpr unsigned ENEMY_SPRITE_WIDTH = 42;
+constexpr unsigned DIGITS_SPRITES_COUNT = 10;
+constexpr unsigned DIGITS_SPRITE_SIZE = 20;
 constexpr unsigned PACKMAN_SPEED = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
 
@@ -367,6 +369,22 @@ bool initSpritesEnemy(sf::Image sprites_file, std::vector<Sprite *> &sprites, in
     return true;
 }
 
+bool initSpritesDigits(sf::Image sprites_file, std::vector<Sprite *> &sprites, int sprites_count)
+{
+    Sprite *sprite;
+
+    for (int i = 0; i < sprites_count; i++)
+    {
+        int x = i * DIGITS_SPRITE_SIZE;
+        sprite = new Sprite;
+        sprites.push_back(sprite);
+        sprites[i]->t.loadFromImage(sprites_file, sf::IntRect(x, 0, DIGITS_SPRITE_SIZE, DIGITS_SPRITE_SIZE));
+        sprites[i]->s.setTexture(sprites[i]->t);
+    }
+
+    return true;
+}
+
 // ‘ункци€ обрабатывает все событи€, скопившиес€ в очереди событий SFML.
 void handleEvents(sf::RenderWindow &window, Hero &pacman)
 {
@@ -429,7 +447,7 @@ void renderHero(sf::RenderWindow &window, std::vector<Sprite *> sprites, Hero he
         break;
     }
 
-    sprite->s.setPosition(sf::Vector2f(hero.position.x, hero.position.y));
+    sprite->s.setPosition(hero.position);
     window.draw(sprite->s);
 
     sprite = NULL;
@@ -442,11 +460,37 @@ void renderEnemy(sf::RenderWindow &window, std::vector<Sprite *> sprites, Enemy 
 
     sprite = sprites[0];
 
-    sprite->s.setPosition(sf::Vector2f(enemy.position.x, enemy.position.y));
+    sprite->s.setPosition(enemy.position);
     window.draw(sprite->s);
 
     sprite = NULL;
     delete sprite;
+}
+
+void renderDigit(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Vector2f position, int digit)
+{
+    Sprite *sprite;
+
+    sprite = sprites[digit];
+
+    sprite->s.setPosition(position);
+    window.draw(sprite->s);
+
+    sprite = NULL;
+    delete sprite;
+}
+
+void printNumber(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Vector2f position, int unsigned value)
+{
+    int unsigned i = 0;
+    do
+    {
+        int unsigned digit = value % 10;
+        value = value / 10;
+        renderDigit(window, sprites, sf::Vector2f(position.x - static_cast<float>(i * DIGITS_SPRITE_SIZE), position.y), digit);
+        i++;
+    }
+    while (value != 0);
 }
 
 void initGame(Game &game)
@@ -857,6 +901,7 @@ int main(int, char *[])
     sf::Image sprites_map_file;
     sf::Image sprites_hero_file;
     sf::Image sprites_enemy_file;
+    sf::Image sprites_digits_file;
 
     if (!sprites_map_file.loadFromFile("sprites.png"))
     {
@@ -876,6 +921,12 @@ int main(int, char *[])
         return 1;
     }
 
+    if (!sprites_digits_file.loadFromFile("sprites_digits.png"))
+    {
+        std::cout << "Error loading enemy sprites!" << std::endl;
+        return 1;
+    }
+
     std::vector<Sprite *> sprites_map;
     initSpritesMap(sprites_map_file, sprites_map, MAP_SPRITES_COUNT);
 
@@ -884,6 +935,9 @@ int main(int, char *[])
 
     std::vector<Sprite *> sprites_enemy;
     initSpritesEnemy(sprites_enemy_file, sprites_enemy, ENEMY_SPRITES_COUNT);
+
+    std::vector<Sprite *> sprites_digits;
+    initSpritesDigits(sprites_digits_file, sprites_digits, DIGITS_SPRITES_COUNT);
 
     GameMap map;
     initMap(map);
@@ -907,6 +961,7 @@ int main(int, char *[])
         renderMap(window, map, sprites_map);
         renderHero(window, sprites_hero, hero);
         renderEnemy(window, sprites_enemy, enemy);
+        printNumber(window, sprites_digits, sf::Vector2f(800.0, 24.0), game.coins);
 
         window.display();
     }
