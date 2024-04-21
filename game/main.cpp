@@ -9,26 +9,35 @@ constexpr unsigned ANTIALIASING_LEVEL = 8;
 constexpr unsigned WINDOW_WIDTH = 900;
 constexpr unsigned WINDOW_HEIGHT = 750;
 constexpr unsigned MAX_FPS = 60;
+
 constexpr unsigned MAP_SPRITES_WIDTH = 8;
 constexpr unsigned MAP_SPRITES_COUNT = 36;
 constexpr unsigned MAP_SPRITE_SIZE = 24;
 constexpr unsigned MAP_SPRITE_SIZE_HALF = MAP_SPRITE_SIZE / 2;
+
 constexpr unsigned GAME_MAP_WIDTH = 28;
 constexpr unsigned GAME_MAP_HEIGHT = 31;
+
 constexpr unsigned HERO_SPRITES_COUNT = 6;
 constexpr unsigned HERO_SPRITE_WIDTH = 24;
 constexpr unsigned HERO_SPRITE_HEIGHT = 42;
+
 constexpr unsigned ENEMY_SPRITES_COUNT = 2;
 constexpr unsigned ENEMY_SPRITE_HEIGHT = 42;
 constexpr unsigned ENEMY_SPRITE_WIDTH = 42;
+
 constexpr unsigned DIGITS_SPRITES_COUNT = 10;
 constexpr unsigned DIGITS_SPRITE_SIZE = 20;
+
 constexpr unsigned TEXT_SPRITES_COUNT = 9;
 constexpr unsigned TEXT_SPRITE_HEIGHT = 20;
-constexpr std::array<int, TEXT_SPRITES_COUNT> TEXT_SPRITE_WIDTH{82, 102, 62, 120, 80, 80, 102, 102, 20};
+constexpr std::array<int, TEXT_SPRITES_COUNT> TEXT_SPRITE_WIDTH = {
+    82, 102, 62, 120, 80, 80, 102, 102, 20};
+
 constexpr unsigned HERO_SPEED_INITIAL = 100.f;
 constexpr unsigned ENEMY_SPEED_INITIAL = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
+
 constexpr unsigned COIN_ITEM_COST = 10;
 constexpr unsigned STAR_ITEM_COST = 50;
 constexpr unsigned LIVE_COST_IN_COINS = 300;
@@ -52,9 +61,20 @@ enum struct Direction
     RIGHT
 };
 
+enum struct Mode
+{
+    STAGE,
+    READY,
+    GAME,
+    GAME_OVER,
+    COMPLETE,
+    CATCHED,
+};
+
 struct Root
 {
     int unsigned highScore;
+    Mode mode;
 };
 
 struct Hero
@@ -580,6 +600,7 @@ void renderInfo(sf::RenderWindow &window, Root &root, Game &game, std::vector<Sp
 void initRoot(Root &root)
 {
     root.highScore = 10000;
+    root.mode = Mode::GAME;
 }
 
 void initGame(Game &game)
@@ -888,19 +909,6 @@ void updateEnemies(Hero &pacman, float elapsedTime, Enemy &enemy, const GameMap 
             // сменить направление
             enemy.direction = newDir;
         }
-
-        // if (!isNextStepPossible(posStartMapX, posStartMapY, enemy.direction, map))
-        // {
-        //     switch (enemy.direction)
-        //     {
-        //     case Direction::LEFT:
-        //         enemy.direction = Direction::RIGHT;
-        //         break;
-        //     case Direction::RIGHT:
-        //         enemy.direction = Direction::LEFT;
-        //         break;
-        //     }
-        // }
         else
         {
             enemy.position = posFinish;
@@ -1085,14 +1093,30 @@ int main(int, char *[])
     sf::Clock clock;
     while (window.isOpen())
     {
-        handleEvents(window, hero);
-        update(clock, root, game, hero, enemy, map);
-        window.clear();
+        switch (root.mode)
+        {
+        case Mode::STAGE:
+            break;
+        case Mode::READY:
+            break;
+        case Mode::GAME:
+            handleEvents(window, hero);
+            update(clock, root, game, hero, enemy, map);
+            window.clear();
 
-        renderMap(window, map, sprites_map);
-        renderHero(window, sprites_hero, hero);
-        renderEnemy(window, sprites_enemy, enemy);
-        renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
+            renderMap(window, map, sprites_map);
+            renderHero(window, sprites_hero, hero);
+            renderEnemy(window, sprites_enemy, enemy);
+            renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
+
+            break;
+        case Mode::GAME_OVER:
+            break;
+        case Mode::COMPLETE:
+            break;
+        case Mode::CATCHED:
+            break;
+        }
 
         window.display();
     }
