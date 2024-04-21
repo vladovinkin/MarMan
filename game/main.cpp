@@ -296,22 +296,22 @@ void createWindow(sf::RenderWindow &window)
     window.setFramerateLimit(MAX_FPS);
 }
 
-bool handlePackmanKeyPress(const sf::Event::KeyEvent &event, Hero &packman)
+bool handlePacmanKeyPress(const sf::Event::KeyEvent &event, Hero &pacman)
 {
     bool handled = true;
     switch (event.code)
     {
     case sf::Keyboard::Up:
-        packman.directionDesired = Direction::UP;
+        pacman.directionDesired = Direction::UP;
         break;
     case sf::Keyboard::Down:
-        packman.directionDesired = Direction::DOWN;
+        pacman.directionDesired = Direction::DOWN;
         break;
     case sf::Keyboard::Left:
-        packman.directionDesired = Direction::LEFT;
+        pacman.directionDesired = Direction::LEFT;
         break;
     case sf::Keyboard::Right:
-        packman.directionDesired = Direction::RIGHT;
+        pacman.directionDesired = Direction::RIGHT;
         break;
     default:
         handled = false;
@@ -320,33 +320,33 @@ bool handlePackmanKeyPress(const sf::Event::KeyEvent &event, Hero &packman)
     return handled;
 }
 
-bool handlePackmanKeyRelease(const sf::Event::KeyEvent &event, Hero &packman)
+bool handlePacmanKeyRelease(const sf::Event::KeyEvent &event, Hero &pacman)
 {
     bool handled = true;
     switch (event.code)
     {
     case sf::Keyboard::Up:
-        if (packman.directionDesired == Direction::UP)
+        if (pacman.directionDesired == Direction::UP)
         {
-            packman.directionDesired = Direction::NONE;
+            pacman.directionDesired = Direction::NONE;
         }
         break;
     case sf::Keyboard::Down:
-        if (packman.directionDesired == Direction::DOWN)
+        if (pacman.directionDesired == Direction::DOWN)
         {
-            packman.directionDesired = Direction::NONE;
+            pacman.directionDesired = Direction::NONE;
         }
         break;
     case sf::Keyboard::Left:
-        if (packman.directionDesired == Direction::LEFT)
+        if (pacman.directionDesired == Direction::LEFT)
         {
-            packman.directionDesired = Direction::NONE;
+            pacman.directionDesired = Direction::NONE;
         }
         break;
     case sf::Keyboard::Right:
-        if (packman.directionDesired == Direction::RIGHT)
+        if (pacman.directionDesired == Direction::RIGHT)
         {
-            packman.directionDesired = Direction::NONE;
+            pacman.directionDesired = Direction::NONE;
         }
         break;
     default:
@@ -472,10 +472,10 @@ void handleEvents(sf::RenderWindow &window, const Root &root, const Game &game, 
                 window.close();
                 break;
             case sf::Event::KeyPressed:
-                handlePackmanKeyPress(event.key, pacman);
+                handlePacmanKeyPress(event.key, pacman);
                 break;
             case sf::Event::KeyReleased:
-                handlePackmanKeyRelease(event.key, pacman);
+                handlePacmanKeyRelease(event.key, pacman);
                 break;
             }
         }
