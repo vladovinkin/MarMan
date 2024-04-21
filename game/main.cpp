@@ -23,6 +23,9 @@ constexpr unsigned ENEMY_SPRITE_HEIGHT = 42;
 constexpr unsigned ENEMY_SPRITE_WIDTH = 42;
 constexpr unsigned DIGITS_SPRITES_COUNT = 10;
 constexpr unsigned DIGITS_SPRITE_SIZE = 20;
+constexpr unsigned TEXT_SPRITES_COUNT = 8;
+constexpr unsigned TEXT_SPRITE_HEIGHT = 20;
+constexpr std::array<int, 8> TEXT_SPRITE_WIDTH{82, 102, 62, 120, 80, 80, 102, 102};
 constexpr unsigned HERO_SPEED_INITIAL = 100.f;
 constexpr unsigned ENEMY_SPEED_INITIAL = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
@@ -73,6 +76,7 @@ struct Game
     int unsigned stars;
     int unsigned score;
     int unsigned highScore;
+    int unsigned stage;
 };
 
 // -- предварительные объ€влени€ функций (всех, кроме main) --
@@ -392,6 +396,22 @@ bool initSpritesDigits(sf::Image sprites_file, std::vector<Sprite *> &sprites, i
     return true;
 }
 
+bool initSpritesText(sf::Image sprites_file, std::vector<Sprite *> &sprites, int sprites_count)
+{
+    Sprite *sprite;
+
+    for (int i = 0; i < sprites_count; i++)
+    {
+        int y = i * TEXT_SPRITE_HEIGHT;
+        sprite = new Sprite;
+        sprites.push_back(sprite);
+        sprites[i]->t.loadFromImage(sprites_file, sf::IntRect(0, y, TEXT_SPRITE_WIDTH[i], TEXT_SPRITE_HEIGHT));
+        sprites[i]->s.setTexture(sprites[i]->t);
+    }
+
+    return true;
+}
+
 // ‘ункци€ обрабатывает все событи€, скопившиес€ в очереди событий SFML.
 void handleEvents(sf::RenderWindow &window, Hero &pacman)
 {
@@ -499,8 +519,14 @@ void printNumber(sf::RenderWindow &window, std::vector<Sprite *> sprites, sf::Ve
     } while (value != 0);
 }
 
+void renderInfo(sf::RenderWindow &window, Game &game, std::vector<Sprite *> sprites_text, std::vector<Sprite *> sprites_digits, std::vector<Sprite *> sprites_hero)
+{
+    printNumber(window, sprites_digits, sf::Vector2f(800.0, 24.0), game.score);
+}
+
 void initGame(Game &game)
 {
+    game.stage = 1;
     game.lives = 2;
     game.coins = 0;
     game.stars = 0;
@@ -923,28 +949,35 @@ int main(int, char *[])
     sf::Image sprites_hero_file;
     sf::Image sprites_enemy_file;
     sf::Image sprites_digits_file;
+    sf::Image sprites_text_file;
 
-    if (!sprites_map_file.loadFromFile("sprites.png"))
+    if (!sprites_map_file.loadFromFile("assets/sprites_map.png"))
     {
         std::cout << "Error loading map sprites!" << std::endl;
         return 1;
     }
 
-    if (!sprites_hero_file.loadFromFile("sprites_hero.png"))
+    if (!sprites_hero_file.loadFromFile("assets/sprites_hero.png"))
     {
         std::cout << "Error loading hero sprites!" << std::endl;
         return 1;
     }
 
-    if (!sprites_enemy_file.loadFromFile("goomba.png"))
+    if (!sprites_enemy_file.loadFromFile("assets/sprites_goomba.png"))
     {
         std::cout << "Error loading enemy sprites!" << std::endl;
         return 1;
     }
 
-    if (!sprites_digits_file.loadFromFile("sprites_digits.png"))
+    if (!sprites_digits_file.loadFromFile("assets/sprites_digits.png"))
     {
-        std::cout << "Error loading enemy sprites!" << std::endl;
+        std::cout << "Error loading digits sprites!" << std::endl;
+        return 1;
+    }
+
+    if (!sprites_text_file.loadFromFile("assets/sprites_text.png"))
+    {
+        std::cout << "Error loading text sprites!" << std::endl;
         return 1;
     }
 
@@ -959,6 +992,9 @@ int main(int, char *[])
 
     std::vector<Sprite *> sprites_digits;
     initSpritesDigits(sprites_digits_file, sprites_digits, DIGITS_SPRITES_COUNT);
+
+    std::vector<Sprite *> sprites_text;
+    initSpritesText(sprites_text_file, sprites_text, TEXT_SPRITES_COUNT);
 
     GameMap map;
     initMap(map);
@@ -982,12 +1018,16 @@ int main(int, char *[])
         renderMap(window, map, sprites_map);
         renderHero(window, sprites_hero, hero);
         renderEnemy(window, sprites_enemy, enemy);
-        printNumber(window, sprites_digits, sf::Vector2f(800.0, 24.0), game.score);
+        renderInfo(window, game, sprites_text, sprites_digits, sprites_hero);
 
         window.display();
     }
 
     clearSprites(sprites_map);
+    clearSprites(sprites_hero);
+    clearSprites(sprites_enemy);
+    clearSprites(sprites_digits);
+    clearSprites(sprites_text);
 
     return 0;
 }
