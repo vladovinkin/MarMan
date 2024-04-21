@@ -38,6 +38,7 @@ constexpr unsigned HERO_SPEED_INITIAL = 100.f;
 constexpr unsigned ENEMY_SPEED_INITIAL = 100.f;
 constexpr unsigned LIMIT_PIXELS_TO_TURN = 3;
 
+constexpr unsigned COINS_IN_LEVEL = 240;
 constexpr unsigned COIN_ITEM_COST = 10;
 constexpr unsigned STAR_ITEM_COST = 50;
 constexpr unsigned LIVE_COST_IN_COINS = 300;
@@ -104,6 +105,7 @@ struct Game
 {
     int unsigned lives;
     int unsigned coins;
+    int unsigned coinsLevel;
     int unsigned stars;
     int unsigned score;
     int unsigned stage;
@@ -632,6 +634,12 @@ void renderReady(sf::RenderWindow &window, std::vector<Sprite *> sprites_text)
     renderText(window, sprites_text, sf::Vector2f(288.0, 408.0), 3);
 }
 
+void renderGameOver(sf::RenderWindow &window, std::vector<Sprite *> sprites_text)
+{
+    renderText(window, sprites_text, sf::Vector2f(240.0, 408.0), 4);
+    renderText(window, sprites_text, sf::Vector2f(364.0, 408.0), 5);
+}
+
 void initRoot(Root &root)
 {
     root.highScore = 10000;
@@ -644,6 +652,7 @@ void initGame(Game &game)
     game.lives = 2;
     game.stage = 1;
     game.coins = 0;
+    game.coinsLevel = 0;
     game.stars = 0;
     game.score = 0;
 }
@@ -1016,6 +1025,7 @@ void calcCollisionsItems(Root &root, Game &game, Hero &pacman, GameMap &map)
             if (nextSpriteValue == 1)
             {
                 game.coins++;
+                game.coinsLevel++;
                 if (game.coins == LIVE_COST_IN_COINS)
                 {
                     game.coins = 0;
@@ -1025,6 +1035,12 @@ void calcCollisionsItems(Root &root, Game &game, Hero &pacman, GameMap &map)
                     }
                 }
                 increaseScore(root, game, COIN_ITEM_COST);
+                if (game.coinsLevel == COINS_IN_LEVEL)
+                {
+
+                    root.mode = Mode::COMPLETE;
+                    game.coinsLevel = 0;
+                }
             }
             else
             {
@@ -1056,9 +1072,13 @@ void update(sf::Clock &clock, Root &root, Game &game, Hero &pacman, Enemy &enemy
         {
             updatePacman(pacman, elapsedTime, map);
             updateEnemies(pacman, elapsedTime, enemy, map);
+            calcCollisionsItems(root, game, pacman, map);
+            calcCollisionsEnemies(pacman, enemy);
         }
-        calcCollisionsItems(root, game, pacman, map);
-        calcCollisionsEnemies(pacman, enemy);
+        else
+        {
+            root.mode = Mode::CATCHED;
+        }
         break;
     case Mode::STAGE:
         root.modeTimer += elapsedTime;
@@ -1077,6 +1097,42 @@ void update(sf::Clock &clock, Root &root, Game &game, Hero &pacman, Enemy &enemy
         {
             root.modeTimer = 0.0;
             root.mode = Mode::GAME;
+        }
+        break;
+    case Mode::CATCHED:
+        root.modeTimer += elapsedTime;
+        if (root.modeTimer >= MODE_TIME)
+        {
+            root.modeTimer = 0.0;
+            if (game.lives == 0)
+            {
+                root.mode = Mode::GAME_OVER;
+            }
+            else
+            {
+                initHero(pacman);
+                initEnemy(enemy);
+                game.lives--;
+                root.mode = Mode::READY;
+            }
+        }
+        break;
+    case Mode::GAME_OVER:
+        root.modeTimer += elapsedTime;
+        if (root.modeTimer >= MODE_TIME)
+        {
+            initGame(game);
+            root.modeTimer = 0.0;
+            root.mode = Mode::STAGE;
+        }
+        break;
+    case Mode::COMPLETE:
+        root.modeTimer += elapsedTime;
+        if (root.modeTimer >= MODE_TIME)
+        {
+            game.stage++;
+            root.modeTimer = 0.0;
+            root.mode = Mode::STAGE;
         }
         break;
     }
@@ -1177,7 +1233,7 @@ int main(int, char *[])
         case Mode::GAME_OVER:
             renderMap(window, map, sprites_map);
             renderInfo(window, root, game, sprites_text, sprites_digits, sprites_hero);
-            // renderGameOver();
+            renderGameOver(window, sprites_text);
             break;
         case Mode::COMPLETE:
             renderMap(window, map, sprites_map);
